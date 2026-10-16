@@ -1,0 +1,49 @@
+{
+  "incident": {
+    "repo": "local/sentinel-os-demo",
+    "branch": "main",
+    "base_branch": "main",
+    "error": "GET /profile/{user_id} crashes when email is missing.",
+    "logs": "AttributeError: 'NoneType' object has no attribute 'lower'",
+    "failed_test": "test_profile_requires_email fails because the endpoint raises instead of returning HTTP 422.",
+    "git_diff": "HEAD~1..HEAD changes the missing-email guard to an unguarded email.lower() call."
+  },
+  "root_cause": {
+    "status": "fixture_evidence",
+    "cause": "The optional email parameter is dereferenced with .lower() before checking whether it is None.",
+    "confidence": 1.0,
+    "evidence": [
+      "email is declared optional in the endpoint signature.",
+      "The failing test requests the endpoint without email.",
+      "The traceback reports NoneType has no attribute lower."
+    ]
+  },
+  "patch": {
+    "status": "not_applied",
+    "file_name": "app.py",
+    "proposed_diff": "--- a/app.py\n+++ b/app.py\n@@ -5,3 +5,5 @@\n @app.get(\"/profile/{user_id}\")\n def get_profile(user_id: str, email: str | None = None) -> dict[str, str]:\n+    if email is None:\n+        raise HTTPException(status_code=422, detail=\"email is required\")\n     return {\"user_id\": user_id, \"email\": email.lower()}\n",
+    "explanation": "Reject the missing optional email with the API's expected 422 response before normalizing it."
+  },
+  "tests": {
+    "status": "present_in_demo_repository",
+    "generated_test_code": "from fastapi.testclient import TestClient\n\nfrom app import app\n\n\ndef test_profile_requires_email():\n    client = TestClient(app)\n    response = client.get(\"/profile/demo-user\")\n    assert response.status_code == 422\n    assert response.json() == {\"detail\": \"email is required\"}\n",
+    "expected_result": "A request without email returns HTTP 422 and does not raise AttributeError."
+  },
+  "validation": {
+    "status": "not_run",
+    "passed": false,
+    "report": "This checked-in fixture describes the reproducible incident. Run POST /demo/run to record actual sandbox validation."
+  },
+  "pr": {
+    "agent": "PullRequestAgent",
+    "status": "not_created",
+    "branch": null,
+    "title": "Fix missing email handling in GET /profile/{user_id}",
+    "description": "Validate that email is present before lowercasing it. The missing-email regression test must pass in the sandbox before a branch is pushed.",
+    "changed_files": [
+      "app.py"
+    ],
+    "url": null,
+    "reason": "A live PR is created only after a configured demo run passes validation and pushes its branch."
+  }
+}

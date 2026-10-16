@@ -1,0 +1,47 @@
+services:
+  dashboard:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_PROXY_TARGET: http://sentinel-os:8000
+    depends_on:
+      - sentinel-os
+    restart: unless-stopped
+
+  sentinel-os:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_API_URL: https://api.github.com
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5-coder:7b}
+      SENTINELOS_REPOSITORY_ROOT: /workspace
+      SENTINELOS_DOCKER_IMAGE: ${SENTINELOS_DOCKER_IMAGE:-sentinel-os-sandbox:latest}
+      SENTINELOS_TEST_COMMAND: ${SENTINELOS_TEST_COMMAND:-python -m pytest}
+      SENTINELOS_OLLAMA_RETRIES: ${SENTINELOS_OLLAMA_RETRIES:-2}
+      SENTINELOS_DEMO_ENABLED: ${SENTINELOS_DEMO_ENABLED:-false}
+      SENTINELOS_DEMO_REPOSITORY: ${SENTINELOS_DEMO_REPOSITORY:-}
+      SENTINELOS_DEMO_PATH: /workspace/demo-repo
+    volumes:
+      - ${SENTINELOS_WORKSPACE:-./backend}:/workspace:ro
+      - ${SENTINELOS_DEMO_CHECKOUT:-./demo-repo}:/workspace/demo-repo
+    depends_on:
+      ollama:
+        condition: service_started
+        required: false
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["llm"]
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  ollama-data:
