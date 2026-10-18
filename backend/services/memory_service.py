@@ -1,8 +1,8 @@
-from pathlib import Path
 import re
 import sqlite3
-from contextlib import contextmanager
 from collections.abc import Generator
+from contextlib import contextmanager
+from pathlib import Path
 from typing import Any
 
 from core.config import Settings, settings
@@ -108,9 +108,7 @@ class MemoryService:
             similarity = len(query_tokens & record_tokens) / len(union) if union else 0
             if similarity:
                 record["fix_diff"] = _clip(record["fix_diff"], 8_000)
-                record["generated_tests"] = _clip(
-                    record["generated_tests"], 5_000
-                )
+                record["generated_tests"] = _clip(record["generated_tests"], 5_000)
                 record["description"] = _clip(record["description"], 2_000)
                 record["root_cause"] = _clip(record["root_cause"], 1_000)
                 record["similarity"] = round(similarity, 3)
@@ -155,8 +153,7 @@ class MemoryService:
 
     def _initialize(self) -> None:
         with self._connect() as connection:
-            connection.execute(
-                """
+            connection.execute("""
                 CREATE TABLE IF NOT EXISTS incidents (
                     incident_id TEXT PRIMARY KEY,
                     repository TEXT NOT NULL,
@@ -167,8 +164,7 @@ class MemoryService:
                     validation TEXT NOT NULL,
                     created_at TEXT NOT NULL
                 )
-                """
-            )
+                """)
             connection.execute(
                 "CREATE INDEX IF NOT EXISTS incidents_repo_date "
                 "ON incidents(repository, created_at DESC)"

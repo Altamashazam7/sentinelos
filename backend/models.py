@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
 from uuid import uuid4
 
@@ -42,8 +42,7 @@ class IncidentRequest(BaseModel):
             not part
             or part in {".", ".."}
             or not all(
-                char.isascii() and (char.isalnum() or char in "_.-")
-                for char in part
+                char.isascii() and (char.isalnum() or char in "_.-") for char in part
             )
             for part in parts
         ):
@@ -54,7 +53,7 @@ class IncidentRequest(BaseModel):
 class Incident(IncidentRequest):
     id: str = Field(default_factory=lambda: str(uuid4()))
     status: IncidentStatus = IncidentStatus.RECEIVED
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class IncidentAnalysisRequest(BaseModel):
@@ -67,9 +66,7 @@ class IncidentAnalysisRequest(BaseModel):
 
     @model_validator(mode="after")
     def require_evidence(self) -> "IncidentAnalysisRequest":
-        if not any(
-            (self.logs, self.stack_trace, self.failed_test, self.git_diff)
-        ):
+        if not any((self.logs, self.stack_trace, self.failed_test, self.git_diff)):
             raise ValueError("Provide at least one incident evidence field.")
         return self
 

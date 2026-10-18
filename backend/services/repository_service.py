@@ -1,6 +1,6 @@
 import os
-from pathlib import Path
 import subprocess
+from pathlib import Path
 from typing import Any
 
 from core.config import Settings, settings
@@ -43,8 +43,7 @@ class RepositoryService:
             subdirectories[:] = [
                 name
                 for name in subdirectories
-                if name not in ignored
-                and not (Path(directory) / name).is_symlink()
+                if name not in ignored and not (Path(directory) / name).is_symlink()
             ]
             for filename in filenames:
                 candidate = Path(directory) / filename
@@ -88,7 +87,9 @@ class RepositoryService:
             for part in Path(relative_path).parts:
                 current = current / part
                 if current.is_symlink():
-                    raise ValueError("Symbolic links cannot be read as repository files.")
+                    raise ValueError(
+                        "Symbolic links cannot be read as repository files."
+                    )
             try:
                 candidate = unresolved.resolve(strict=True)
             except FileNotFoundError as exc:

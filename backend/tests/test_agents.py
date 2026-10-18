@@ -1,5 +1,5 @@
-from pathlib import Path
 import subprocess
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -52,8 +52,7 @@ def test_patch_agent_returns_model_diff() -> None:
             {
                 "file_name": "src/fix.py",
                 "proposed_diff": (
-                    "--- a/src/fix.py\n+++ b/src/fix.py\n"
-                    "@@ -1 +1 @@\n-old\n+new\n"
+                    "--- a/src/fix.py\n+++ b/src/fix.py\n" "@@ -1 +1 @@\n-old\n+new\n"
                 ),
                 "explanation": "Guard missing input.",
             }
@@ -139,8 +138,7 @@ def test_patch_consistency_rejects_incorrect_hunk_counts() -> None:
         status="proposed",
         file_name="src/fix.py",
         proposed_diff=(
-            "--- a/src/fix.py\n+++ b/src/fix.py\n"
-            "@@ -1,2 +1 @@\n-old\n+new\n"
+            "--- a/src/fix.py\n+++ b/src/fix.py\n" "@@ -1,2 +1 @@\n-old\n+new\n"
         ),
         explanation="Invalid hunk count.",
     )
@@ -153,8 +151,7 @@ def test_patch_consistency_rejects_path_mismatch() -> None:
         status="proposed",
         file_name="src/expected.py",
         proposed_diff=(
-            "--- a/src/actual.py\n+++ b/src/actual.py\n"
-            "@@ -1 +1 @@\n-old\n+new\n"
+            "--- a/src/actual.py\n+++ b/src/actual.py\n" "@@ -1 +1 @@\n-old\n+new\n"
         ),
         explanation="The filename does not match the diff.",
     )
@@ -251,9 +248,7 @@ def test_validation_reports_failed_sandbox_run(tmp_path: Path) -> None:
     patch = PatchProposal(
         status="applied",
         file_name="src/fix.py",
-        proposed_diff=(
-            "--- a/src/fix.py\n+++ b/src/fix.py\n@@ -1 +1 @@\n-old\n+new\n"
-        ),
+        proposed_diff=("--- a/src/fix.py\n+++ b/src/fix.py\n@@ -1 +1 @@\n-old\n+new\n"),
         explanation="Applied change.",
         applied=True,
     )

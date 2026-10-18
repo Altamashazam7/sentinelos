@@ -47,9 +47,7 @@ def run(
         )
     return ArchitectureEvolutionResponse(
         architecture_risks=_string_list(response.get("architecture_risks")),
-        refactoring_suggestions=_string_list(
-            response.get("refactoring_suggestions")
-        ),
+        refactoring_suggestions=_string_list(response.get("refactoring_suggestions")),
         cost_optimisations=_string_list(response.get("cost_optimisations")),
     )
 
@@ -57,8 +55,6 @@ def run(
 def _string_list(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
-    return [
-        item.strip()
-        for item in value
-        if isinstance(item, str) and item.strip()
-    ][:20]
+    return [item.strip() for item in value if isinstance(item, str) and item.strip()][
+        :20
+    ]

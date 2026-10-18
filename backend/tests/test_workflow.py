@@ -174,8 +174,7 @@ def test_commander_applies_pushed_fix_through_pull_request_agent() -> None:
         status="proposed",
         file_name="src/handler.py",
         proposed_diff=(
-            "--- a/src/handler.py\n+++ b/src/handler.py\n"
-            "@@ -1 +1 @@\n-old\n+new\n"
+            "--- a/src/handler.py\n+++ b/src/handler.py\n" "@@ -1 +1 @@\n-old\n+new\n"
         ),
         explanation="Fix the handler.",
     )

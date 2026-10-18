@@ -36,8 +36,7 @@ class EvidenceOllama(OllamaService):
             }
         return {
             "generated_test_code": (
-                "def test_missing_value():\n"
-                "    assert handle(None) == 'invalid'\n"
+                "def test_missing_value():\n" "    assert handle(None) == 'invalid'\n"
             ),
             "expected_result": "Missing values return a validation error.",
             "edge_cases": ["None", "empty string", "whitespace-only string"],
@@ -95,4 +94,6 @@ def test_analysis_does_not_fabricate_root_cause_when_ollama_is_unavailable() -> 
     except OllamaUnavailableError as exc:
         assert "Ollama" in str(exc)
     else:
-        raise AssertionError("Unavailable Ollama must not produce a fabricated analysis.")
+        raise AssertionError(
+            "Unavailable Ollama must not produce a fabricated analysis."
+        )

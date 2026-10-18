@@ -1,13 +1,13 @@
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi import WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
+from agents.architecture_agent import ArchitectureAnalysisUnavailable
 from agents.catalog import AGENTS
 from commander import IncidentCommander, get_commander
 from models import (
@@ -18,14 +18,14 @@ from models import (
     DemoRunResponse,
     HealthReport,
     Incident,
-    IncidentApplyFixRequest,
     IncidentAnalysisRequest,
     IncidentAnalysisResponse,
+    IncidentApplyFixRequest,
     IncidentReport,
     IncidentRequest,
 )
-from agents.architecture_agent import ArchitectureAnalysisUnavailable
 from services.architecture_service import ArchitectureEvolutionService
+from services.demo_service import DemoDisabledError, DemoService
 from services.incident_service import (
     IncidentAnalysisService,
     OllamaUnavailableError,
@@ -33,7 +33,7 @@ from services.incident_service import (
     incident_service,
 )
 from services.ollama_service import OllamaService
-from services.demo_service import DemoDisabledError, DemoService
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ async def replay_incident(
     loop = asyncio.get_running_loop()
 
     def publish(event: dict[str, Any]) -> None:
-        event["timestamp"] = datetime.now(timezone.utc).isoformat()
+        event["timestamp"] = datetime.now(UTC).isoformat()
         loop.call_soon_threadsafe(events.put_nowait, event)
 
     async def execute_workflow() -> None:
@@ -88,7 +88,7 @@ async def replay_incident(
                 {
                     "type": "complete",
                     "report": report.model_dump(mode="json"),
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 }
             )
         except Exception as exc:
@@ -103,7 +103,7 @@ async def replay_incident(
                         "The incident workflow failed "
                         f"({type(exc).__name__}); check backend logs."
                     ),
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 }
             )
 
@@ -207,9 +207,7 @@ def apply_incident_fix(
 )
 def evolve_architecture(
     request: ArchitectureEvolutionRequest,
-    service: ArchitectureEvolutionService = Depends(
-        get_architecture_evolution_service
-    ),
+    service: ArchitectureEvolutionService = Depends(get_architecture_evolution_service),
 ) -> ArchitectureEvolutionResponse:
     try:
         return service.evolve(request)

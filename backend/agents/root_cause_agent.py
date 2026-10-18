@@ -66,8 +66,7 @@ def analyze_evidence(
                 for item in model_result.get("evidence", [])
                 if isinstance(item, (str, int, float))
             ][:20]
-            if model_result
-            and isinstance(model_result.get("evidence", []), list)
+            if model_result and isinstance(model_result.get("evidence", []), list)
             else []
         ),
     }

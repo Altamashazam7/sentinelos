@@ -1,5 +1,5 @@
-from pathlib import Path
 import subprocess
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -68,9 +68,7 @@ def test_repository_service_reads_files_and_inspects_git(tmp_path: Path) -> None
 
     service = RepositoryService(_config(tmp_path))
 
-    assert service.read_files(repository, ["module.py"]) == {
-        "module.py": "value = 2\n"
-    }
+    assert service.read_files(repository, ["module.py"]) == {"module.py": "value = 2\n"}
     assert "value = 2" in service.git_diff(repository)
     assert service.git_history(repository)[0]["message"] == "initial"
     assert service.recent_commits(repository, limit=1)[0]["sha"]
@@ -124,9 +122,10 @@ def test_github_service_uses_rest_git_data_operations(
         "Update module",
     )
     assert commit["sha"] == "commit-sha"
-    assert service.push_branch("owner/repo", "feature", "commit-sha")[
-        "object"
-    ]["sha"] == "commit-sha"
+    assert (
+        service.push_branch("owner/repo", "feature", "commit-sha")["object"]["sha"]
+        == "commit-sha"
+    )
     pull_request = service.create_pull_request(
         "owner/repo",
         "Fix issue",

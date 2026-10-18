@@ -44,9 +44,7 @@ class PatchGenerationService:
         explanation = result.get("explanation")
         safe_name = (
             name
-            if isinstance(name, str)
-            and name.strip()
-            and not _unsafe_model_path(name)
+            if isinstance(name, str) and name.strip() and not _unsafe_model_path(name)
             else None
         )
         valid_diff = _strip_code_fence(diff, "diff") if isinstance(diff, str) else ""

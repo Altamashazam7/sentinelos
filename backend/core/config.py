@@ -1,11 +1,11 @@
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+
 
 @dataclass(frozen=True, slots=True)
 class Settings:
@@ -36,9 +36,9 @@ class Settings:
         test_command = os.getenv("SENTINELOS_TEST_COMMAND", "").strip() or None
         return cls(
             github_token=os.getenv("GITHUB_TOKEN") or None,
-            github_api_url=os.getenv(
-                "GITHUB_API_URL", "https://api.github.com"
-            ).rstrip("/"),
+            github_api_url=os.getenv("GITHUB_API_URL", "https://api.github.com").rstrip(
+                "/"
+            ),
             ollama_base_url=os.getenv(
                 "OLLAMA_BASE_URL", "http://localhost:11434"
             ).rstrip("/"),

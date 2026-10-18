@@ -1,8 +1,8 @@
+import re
 from typing import Any
 from urllib.parse import quote
 
 import httpx
-import re
 
 from core.config import Settings, settings
 
@@ -66,7 +66,9 @@ class GitHubService:
             f"/repos/{repository}/git/ref/heads/{quote(from_branch, safe='')}",
         ).json()
         source_object = source.get("object") if isinstance(source, dict) else None
-        source_sha = source_object.get("sha") if isinstance(source_object, dict) else None
+        source_sha = (
+            source_object.get("sha") if isinstance(source_object, dict) else None
+        )
         if not isinstance(source_sha, str):
             raise ValueError("GitHub returned an invalid source branch reference.")
         return _response_object(
@@ -94,11 +96,11 @@ class GitHubService:
             "GET",
             f"/repos/{repository}/git/ref/heads/{quote(branch, safe='')}",
         ).json()
-        reference_object = reference.get("object") if isinstance(reference, dict) else None
+        reference_object = (
+            reference.get("object") if isinstance(reference, dict) else None
+        )
         parent_sha = (
-            reference_object.get("sha")
-            if isinstance(reference_object, dict)
-            else None
+            reference_object.get("sha") if isinstance(reference_object, dict) else None
         )
         if not isinstance(parent_sha, str):
             raise ValueError("GitHub returned an invalid branch reference.")
@@ -106,7 +108,9 @@ class GitHubService:
             "GET",
             f"/repos/{repository}/git/commits/{quote(parent_sha, safe='')}",
         ).json()
-        parent_tree = parent_commit.get("tree") if isinstance(parent_commit, dict) else None
+        parent_tree = (
+            parent_commit.get("tree") if isinstance(parent_commit, dict) else None
+        )
         parent_tree_sha = (
             parent_tree.get("sha") if isinstance(parent_tree, dict) else None
         )
@@ -121,7 +125,9 @@ class GitHubService:
                 or "\\" in path
                 or any(part in {"", ".", "..", ".git"} for part in path.split("/"))
             ):
-                raise ValueError("Commit file paths must be safe repository-relative paths.")
+                raise ValueError(
+                    "Commit file paths must be safe repository-relative paths."
+                )
             blob = self._request(
                 "POST",
                 f"/repos/{repository}/git/blobs",

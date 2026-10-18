@@ -75,7 +75,9 @@ class DemoService:
         self._repository_path = config.demo_repository_path or str(
             project_root / "demo-repo"
         )
-        self._report_path = report_path or project_root / "docs" / "incident_report.json"
+        self._report_path = (
+            report_path or project_root / "docs" / "incident_report.json"
+        )
 
     def run(self) -> DemoRunResponse:
         if not self._config.demo_enabled:
@@ -190,8 +192,12 @@ class DemoService:
             and application.validation_report.passed
         )
         pr_created = bool(application and application.pull_request_url)
-        message = application.message if application else (
-            None if root_cause else "RootCauseAgent did not produce a usable cause."
+        message = (
+            application.message
+            if application
+            else (
+                None if root_cause else "RootCauseAgent did not produce a usable cause."
+            )
         )
 
         logger.info(
@@ -227,7 +233,9 @@ class DemoService:
                 check=False,
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
-            raise RuntimeError("Could not run the demo repository's baseline tests.") from exc
+            raise RuntimeError(
+                "Could not run the demo repository's baseline tests."
+            ) from exc
         return (
             result.returncode,
             _clip(f"{result.stdout}\n{result.stderr}", _MAX_TEST_OUTPUT),
@@ -307,9 +315,7 @@ def _incident_failure_evidence(output: str) -> tuple[str, str, str]:
         None,
     )
     logs = "\n".join(lines[:stack_start]) if stack_start is not None else output
-    stack_trace = (
-        "\n".join(lines[stack_start:]) if stack_start is not None else output
-    )
+    stack_trace = "\n".join(lines[stack_start:]) if stack_start is not None else output
     failure_summary = "\n".join(
         line for line in lines if line.startswith(("FAILED ", "ERROR "))
     )

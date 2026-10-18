@@ -1,8 +1,8 @@
 import ast
-from pathlib import Path
 import re
-from shlex import split
 import subprocess
+from pathlib import Path
+from shlex import split
 
 from core.config import Settings, settings
 from models import PatchProposal, RegressionTestReport, ValidationReport
@@ -22,9 +22,7 @@ def run(
     checks = {
         "patch_generated": bool(patch.proposed_diff.strip()),
         "patch_consistent": patch_is_consistent(patch),
-        "regression_test_generated": bool(
-            regression_test.generated_test_code.strip()
-        ),
+        "regression_test_generated": bool(regression_test.generated_test_code.strip()),
         "regression_test_syntax_valid": _test_code_is_valid(
             regression_test.generated_test_code
         ),
@@ -135,17 +133,13 @@ def patch_is_consistent(patch: PatchProposal) -> bool:
         if not lines[hunk_index].startswith("--- "):
             hunk_index += 1
             continue
-        if hunk_index + 1 >= len(lines) or not lines[hunk_index + 1].startswith(
-            "+++ "
-        ):
+        if hunk_index + 1 >= len(lines) or not lines[hunk_index + 1].startswith("+++ "):
             return False
         old_path = lines[hunk_index][4:].split("\t", maxsplit=1)[0]
         new_path = lines[hunk_index + 1][4:].split("\t", maxsplit=1)[0]
         for path in (old_path, new_path):
             if path != "/dev/null" and (
-                path.startswith("/")
-                or "\\" in path
-                or ".." in Path(path).parts
+                path.startswith("/") or "\\" in path or ".." in Path(path).parts
             ):
                 return False
         files.append((old_path, new_path))

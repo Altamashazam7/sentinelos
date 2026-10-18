@@ -1,17 +1,17 @@
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
-from main import app
 from api.routes import (
     get_architecture_evolution_service,
     get_incident_analysis_service,
     get_incident_commander,
 )
+from main import app
 from models import (
-    Incident,
-    IncidentAnalysisResponse,
     ApplyFixResponse,
     ArchitectureEvolutionResponse,
+    Incident,
+    IncidentAnalysisResponse,
     IncidentReport,
     IncidentStatus,
     PatchProposal,
@@ -139,9 +139,7 @@ def test_incident_replay_websocket_streams_agent_events_and_report() -> None:
 
     app.dependency_overrides[get_incident_commander] = lambda: ReplayCommander()
     try:
-        with TestClient(app).websocket_connect(
-            "/ws/incidents/replay"
-        ) as websocket:
+        with TestClient(app).websocket_connect("/ws/incidents/replay") as websocket:
             websocket.send_json(
                 {
                     "repo": "owner/repo",

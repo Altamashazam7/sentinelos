@@ -1,10 +1,10 @@
 import json
 import os
-from pathlib import Path
 import re
 import tomllib
+from pathlib import Path
 from typing import TypedDict
-import xml.etree.ElementTree as ElementTree
+from xml.etree import ElementTree
 
 
 class DependencyAgentResult(TypedDict):
@@ -102,7 +102,7 @@ def _read_dependency_names(path: Path) -> list[str]:
             ]
         elif path.name == "Pipfile":
             names = [
-                line.split("=", maxsplit=1)[0].strip().strip('"\'')
+                line.split("=", maxsplit=1)[0].strip().strip("\"'")
                 for line in lines
                 if "=" in line and not line.lstrip().startswith("#")
             ]
@@ -160,5 +160,7 @@ def _read_dependency_names(path: Path) -> list[str]:
         )
     if path.name == "build.gradle":
         text = path.read_text(encoding="utf-8", errors="replace")
-        return sorted(set(re.findall(r"""['"]([\w.-]+:[\w.-]+(?::[\w.+-]+)?)['"]""", text)))
+        return sorted(
+            set(re.findall(r"""['"]([\w.-]+:[\w.-]+(?::[\w.+-]+)?)['"]""", text))
+        )
     return []
