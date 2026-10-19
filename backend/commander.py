@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypedDict
@@ -36,12 +37,44 @@ from services.patch_generation_service import PatchGenerationService
 from services.repository_service import RepositoryService
 from services.test_generation_service import RegressionTestGenerator
 
+logger = logging.getLogger(__name__)
+
+
+_SOURCE_FILE_SUFFIXES = frozenset(
+    {
+        ".c",
+        ".cc",
+        ".cpp",
+        ".cs",
+        ".go",
+        ".h",
+        ".hpp",
+        ".java",
+        ".js",
+        ".jsx",
+        ".kt",
+        ".php",
+        ".py",
+        ".pyi",
+        ".rb",
+        ".rs",
+        ".scala",
+        ".sh",
+        ".sql",
+        ".swift",
+        ".ts",
+        ".tsx",
+        ".vue",
+    }
+)
+
 
 class SwarmState(TypedDict, total=False):
     incident: Incident
     activity_callback: Callable[[dict[str, Any]], None] | None
     repository_path: Path | None
     repository_analysis: dict[str, Any]
+    repository_files: dict[str, str]
     log_result: dict[str, Any]
     git_result: dict[str, Any]
     test_result: dict[str, Any]
@@ -161,10 +194,33 @@ class IncidentCommander:
         return result
 
     def _repository_analysis(self, state: SwarmState) -> dict[str, Any]:
-        path = self._repository.resolve_repository(state["incident"].local_path)
+        local_path = state["incident"].local_path
+        logger.info(
+            "resolving incident repository path: local_path=%s local_path_repr=%r "
+            "repository_root=%s",
+            local_path,
+            local_path,
+            self._config.repository_root,
+            extra={"event": "repository_path_resolution_requested"},
+        )
+        path = self._repository.resolve_repository(local_path)
+        analysis = self._repository.analyze(path)
+        test_files = set(analysis["test_files"])
+        source_files = sorted(
+            file_name
+            for file_name in analysis["files"]
+            if Path(file_name).suffix.lower() in _SOURCE_FILE_SUFFIXES
+            and file_name not in test_files
+        )[:10]
+        repository_files = (
+            self._repository.read_files(path, source_files)
+            if path is not None
+            else {}
+        )
         return {
             "repository_path": path,
-            "repository_analysis": self._repository.analyze(path),
+            "repository_analysis": analysis,
+            "repository_files": repository_files,
         }
 
     @staticmethod
@@ -209,12 +265,13 @@ class IncidentCommander:
                 state["root_result"]["root_cause"],
                 state["repository_analysis"],
                 self._patch_generator,
-                {
+                evidence={
                     "logs": state["incident"].logs or "",
                     "stack_trace": state["incident"].stack_trace or "",
                     "failed_test": state["incident"].failed_test or "",
                     "git_diff": state["incident"].git_diff or "",
                 },
+                repository_files=state["repository_files"],
             )
         }
 

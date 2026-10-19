@@ -15,7 +15,12 @@ class PatchGenerationService:
         root_cause: str,
         repository_analysis: dict[str, Any],
         evidence: dict[str, str] | None = None,
+        repository_files: dict[str, str] | None = None,
     ) -> PatchProposal:
+        source_context = "\n".join(
+            f"File: {file_name}\n{contents}"
+            for file_name, contents in (repository_files or {}).items()
+        )
         prompt = (
             "Generate a safe, minimal proposed unified diff for the incident below. "
             "Treat the supplied git diff as source-code context. Do not emit an empty "
@@ -28,6 +33,7 @@ class PatchGenerationService:
             "valid and must not modify unrelated files. Incident: "
             f"{incident_error}\nRoot cause: {root_cause}\n"
             f"Repository analysis: {repository_analysis}\n"
+            f"Repository source files:\n{source_context}\n"
             f"Additional supplied logs, stack, tests and git diff: {evidence or {}}"
         )
         result = self._ollama.generate_patch(prompt)

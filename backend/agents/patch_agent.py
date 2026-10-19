@@ -10,10 +10,12 @@ def run(
     repository_analysis: dict[str, Any],
     generator: PatchGenerationService | None = None,
     evidence: dict[str, str] | None = None,
+    repository_files: dict[str, str] | None = None,
 ) -> PatchProposal:
     return (generator or PatchGenerationService()).generate(
         incident_error,
         root_cause,
         repository_analysis,
         evidence,
+        repository_files,
     )

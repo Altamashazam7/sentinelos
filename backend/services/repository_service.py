@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 from pathlib import Path
@@ -5,6 +6,8 @@ from typing import Any
 
 from core.config import Settings, settings
 from services.git_utils import git_command
+
+logger = logging.getLogger(__name__)
 
 
 class RepositoryService:
@@ -20,6 +23,17 @@ class RepositoryService:
             )
         root = Path(self._config.repository_root).expanduser().resolve()
         candidate = Path(requested_path).expanduser().resolve()
+        logger.info(
+            "repository path resolved: requested_path=%s requested_path_repr=%r "
+            "root=%s candidate=%s candidate_exists=%s candidate_is_dir=%s",
+            requested_path,
+            requested_path,
+            root,
+            candidate,
+            candidate.exists(),
+            candidate.is_dir(),
+            extra={"event": "repository_path_resolution_checked"},
+        )
         if not candidate.is_relative_to(root):
             raise ValueError(
                 "Repository path must be inside SENTINELOS_REPOSITORY_ROOT."
