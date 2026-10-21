@@ -351,7 +351,7 @@ def _changed_files(diff: str) -> list[str]:
         selected = new_path if new_path != "/dev/null" else old_path
         if selected in {"/dev/null", "a/", "b/"}:
             continue
-        if selected.startswith("a/") or selected.startswith("b/"):
+        if selected.startswith(("a/", "b/")):
             selected = selected[2:]
         files.add(selected)
     return sorted(files)

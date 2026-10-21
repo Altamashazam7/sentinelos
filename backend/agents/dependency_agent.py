@@ -114,7 +114,7 @@ def _read_dependency_names(path: Path) -> list[str]:
                 and line.strip()
                 and not line.strip().startswith("//")
             ]
-        return sorted(set(name for name in names if name))
+        return sorted({name for name in names if name})
     if path.suffix == ".toml":
         data = tomllib.loads(path.read_text(encoding="utf-8"))
         project = data.get("project", {})

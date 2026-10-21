@@ -162,7 +162,7 @@ def patch_is_consistent(patch: PatchProposal) -> bool:
             hunk_index += 1
             while hunk_index < len(lines):
                 line = lines[hunk_index]
-                if line.startswith("@@ ") or line.startswith("--- "):
+                if line.startswith(("@@ ", "--- ")):
                     break
                 if line.startswith(" "):
                     old_seen += 1
