@@ -25,7 +25,7 @@ class GitHubService:
     def repository_summary(self, repo: str) -> dict[str, Any]:
         payload = self._request("GET", f"/repos/{quote(repo, safe='/')}").json()
         if not isinstance(payload, dict):
-            raise ValueError("GitHub returned an invalid repository response.")
+            raise TypeError("GitHub returned an invalid repository response.")
         return {
             "full_name": payload.get("full_name", repo),
             "default_branch": payload.get("default_branch"),
@@ -40,7 +40,7 @@ class GitHubService:
             params={"sha": branch, "per_page": 5},
         ).json()
         if not isinstance(payload, list):
-            raise ValueError("GitHub returned an invalid commit list.")
+            raise TypeError("GitHub returned an invalid commit list.")
         commits: list[dict[str, str]] = []
         for item in payload:
             if isinstance(item, dict):
@@ -70,7 +70,7 @@ class GitHubService:
             source_object.get("sha") if isinstance(source_object, dict) else None
         )
         if not isinstance(source_sha, str):
-            raise ValueError("GitHub returned an invalid source branch reference.")
+            raise TypeError("GitHub returned an invalid source branch reference.")
         return _response_object(
             self._request(
                 "POST",
@@ -103,7 +103,7 @@ class GitHubService:
             reference_object.get("sha") if isinstance(reference_object, dict) else None
         )
         if not isinstance(parent_sha, str):
-            raise ValueError("GitHub returned an invalid branch reference.")
+            raise TypeError("GitHub returned an invalid branch reference.")
         parent_commit = self._request(
             "GET",
             f"/repos/{repository}/git/commits/{quote(parent_sha, safe='')}",
@@ -115,7 +115,7 @@ class GitHubService:
             parent_tree.get("sha") if isinstance(parent_tree, dict) else None
         )
         if not isinstance(parent_tree_sha, str):
-            raise ValueError("GitHub returned an invalid base commit tree.")
+            raise TypeError("GitHub returned an invalid base commit tree.")
 
         tree_entries: list[dict[str, str]] = []
         for path, content in sorted(files.items()):
@@ -135,7 +135,7 @@ class GitHubService:
             ).json()
             blob_sha = blob.get("sha") if isinstance(blob, dict) else None
             if not isinstance(blob_sha, str):
-                raise ValueError("GitHub returned an invalid file blob.")
+                raise TypeError("GitHub returned an invalid file blob.")
             tree_entries.append(
                 {
                     "path": path,
@@ -151,7 +151,7 @@ class GitHubService:
         ).json()
         tree_sha = tree.get("sha") if isinstance(tree, dict) else None
         if not isinstance(tree_sha, str):
-            raise ValueError("GitHub returned an invalid commit tree.")
+            raise TypeError("GitHub returned an invalid commit tree.")
         return _response_object(
             self._request(
                 "POST",
@@ -217,7 +217,7 @@ class GitHubService:
 def _response_object(response: httpx.Response, operation: str) -> dict[str, Any]:
     payload = response.json()
     if not isinstance(payload, dict):
-        raise ValueError(f"GitHub returned an invalid response for {operation}.")
+        raise TypeError(f"GitHub returned an invalid response for {operation}.")
     return payload
 
 

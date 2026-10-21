@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Callable
+from itertools import pairwise
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -143,7 +144,7 @@ class IncidentCommander:
             )
         graph.add_edge(START, "repository_analysis")
         stages = list(nodes)
-        for current, following in zip(stages, stages[1:]):
+        for current, following in pairwise(stages):
             graph.add_edge(current, following)
         graph.add_edge(stages[-1], END)
         return graph.compile()
@@ -404,7 +405,7 @@ class IncidentCommander:
         )
         report = state.get("report")
         if not isinstance(report, IncidentReport):
-            raise RuntimeError("Incident workflow ended without an incident report.")
+            raise TypeError("Incident workflow ended without an incident report.")
         return report
 
     def apply_fix(

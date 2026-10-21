@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from datetime import UTC, datetime
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
@@ -49,7 +49,7 @@ def get_incident_commander() -> IncidentCommander:
 @router.websocket("/ws/incidents/replay")
 async def replay_incident(
     websocket: WebSocket,
-    commander: IncidentCommander = Depends(get_incident_commander),
+    commander: Annotated[IncidentCommander, Depends(get_incident_commander)],
 ) -> None:
     await websocket.accept()
     try:
@@ -175,7 +175,10 @@ def create_incident(request: IncidentRequest) -> IncidentReport:
 @router.post("/incident/analyze", response_model=IncidentAnalysisResponse)
 def analyze_incident(
     request: IncidentAnalysisRequest,
-    service: IncidentAnalysisService = Depends(get_incident_analysis_service),
+    service: Annotated[
+        IncidentAnalysisService,
+        Depends(get_incident_analysis_service),
+    ],
 ) -> IncidentAnalysisResponse:
     try:
         return service.analyze(request)
@@ -186,7 +189,7 @@ def analyze_incident(
 @router.post("/incident/apply-fix", response_model=ApplyFixResponse)
 def apply_incident_fix(
     request: IncidentApplyFixRequest,
-    commander: IncidentCommander = Depends(get_incident_commander),
+    commander: Annotated[IncidentCommander, Depends(get_incident_commander)],
 ) -> ApplyFixResponse:
     incident = Incident(**request.incident.model_dump())
     try:
@@ -207,7 +210,10 @@ def apply_incident_fix(
 )
 def evolve_architecture(
     request: ArchitectureEvolutionRequest,
-    service: ArchitectureEvolutionService = Depends(get_architecture_evolution_service),
+    service: Annotated[
+        ArchitectureEvolutionService,
+        Depends(get_architecture_evolution_service),
+    ],
 ) -> ArchitectureEvolutionResponse:
     try:
         return service.evolve(request)
@@ -219,7 +225,7 @@ def evolve_architecture(
 
 @router.post("/demo/run", response_model=DemoRunResponse)
 def run_demo(
-    service: DemoService = Depends(get_demo_service),
+    service: Annotated[DemoService, Depends(get_demo_service)],
 ) -> DemoRunResponse:
     try:
         return service.run()
