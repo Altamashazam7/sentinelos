@@ -37,14 +37,12 @@ class FakeOllama(OllamaService):
     def generate_json(self, prompt: str) -> dict[str, Any]:
         if "root_cause and confidence" in prompt:
             return {"root_cause": "Input is not checked.", "confidence": 0.8}
-        if "proposed unified diff" in prompt:
+        if "exact old_code snippet" in prompt:
             return {
                 "file_name": "src/handler.py",
-                "proposed_diff": (
-                    "--- a/src/handler.py\n+++ b/src/handler.py\n"
-                    "@@ -1 +1 @@\n-old\n+new\n"
-                ),
                 "explanation": "Validate the input.",
+                "old_code": "old\n",
+                "new_code": "new\n",
             }
         return {
             "generated_test_code": "def test_missing_value():\n    assert True\n",
@@ -61,13 +59,11 @@ class CapturingOllama(FakeOllama):
         self.patch_prompt = prompt
         return {
             "file_name": "app.py",
-            "proposed_diff": (
-                "--- a/app.py\n+++ b/app.py\n@@ -1,2 +1,2 @@\n"
-                " def get_profile(user_id, email):\n"
-                '-    return {"user_id": user_id, "email": email.lower()}\n'
-                '+    return {"user_id": user_id, "email": (email or "").lower()}\n'
+            "explanation": "Handle a missing email before calling lower().",
+            "old_code": '    return {"user_id": user_id, "email": email.lower()}',
+            "new_code": (
+                '    return {"user_id": user_id, "email": (email or "").lower()}'
             ),
-            "explanation": "Use the supplied source context.",
         }
 
 
@@ -123,7 +119,8 @@ def test_langgraph_workflow_returns_all_agent_results() -> None:
         "ValidationAgent",
         "PullRequestAgent",
     ]
-    assert report.patch.proposed_diff.startswith("---")
+    assert report.patch.status == "unavailable"
+    assert report.patch.proposed_diff == ""
     assert report.regression_test.generated_test_code
     assert report.pull_request.status == "blocked"
     assert len(activity) == 22

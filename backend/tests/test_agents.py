@@ -46,15 +46,14 @@ class FakeSandbox(DockerSandboxService):
         return self.passed, "1 passed" if self.passed else "1 failed"
 
 
-def test_patch_agent_returns_model_diff() -> None:
+def test_patch_agent_generates_diff_from_model_snippets() -> None:
     generator = patch_agent.PatchGenerationService(
         FakeOllama(
             {
                 "file_name": "src/fix.py",
-                "proposed_diff": (
-                    "--- a/src/fix.py\n+++ b/src/fix.py\n" "@@ -1 +1 @@\n-old\n+new\n"
-                ),
-                "explanation": "Guard missing input.",
+                "explanation": "Reject a missing input.",
+                "old_code": "return value\n",
+                "new_code": "if value is None:\n    raise ValueError()\nreturn value\n",
             }
         )
     )
@@ -63,10 +62,162 @@ def test_patch_agent_returns_model_diff() -> None:
         "input is not checked",
         {"files": ["src/fix.py"]},
         generator,
+        repository_files={"src/fix.py": "return value\n"},
     )
     assert result.file_name == "src/fix.py"
     assert result.proposed_diff.startswith("---")
+    assert "+if value is None:" in result.proposed_diff
+    assert patch_is_consistent(result)
     assert result.applied is False
+
+
+def test_patch_generation_prompt_requests_snippets_and_matching_source() -> None:
+    class PromptCapturingOllama(FakeOllama):
+        def __init__(self) -> None:
+            super().__init__(
+                {
+                    "file_name": "app.py",
+                    "explanation": "Reject missing email before lower().",
+                    "old_code": 'return {"email": email.lower()}',
+                    "new_code": (
+                        "if email is None:\n"
+                        "    raise HTTPException(\n"
+                        "        status_code=422,\n"
+                        '        detail="email is required",\n'
+                        "    )\n"
+                        'return {"email": email.lower()}'
+                    ),
+                }
+            )
+            self.prompt = ""
+
+        def generate_json(self, prompt: str) -> dict[str, Any]:
+            self.prompt = prompt
+            return super().generate_json(prompt)
+
+    ollama = PromptCapturingOllama()
+    generator = patch_agent.PatchGenerationService(ollama)
+
+    result = generator.generate(
+        "AttributeError: 'NoneType' object has no attribute 'lower'",
+        "email is None before lower() is called",
+        {"files": ["app.py"]},
+        evidence={
+            "stack_trace": "AttributeError: 'NoneType' object has no attribute 'lower'",
+            "failed_test": "test_missing_email",
+        },
+        repository_files={"app.py": 'return {"email": email.lower()}'},
+    )
+
+    assert result.file_name == "app.py"
+    assert result.proposed_diff
+    assert "Select exactly one target file" in ollama.prompt
+    assert "exact old_code snippet" in ollama.prompt
+    assert "new_code replacement" in ollama.prompt
+    assert "do not produce a diff" in ollama.prompt
+    assert "AttributeError: 'NoneType' object has no attribute 'lower'" in ollama.prompt
+    assert "File: app.py\nreturn {\"email\": email.lower()}" in ollama.prompt
+
+
+def test_patch_generation_builds_consistent_app_py_diff_from_snippets() -> None:
+    demo_app = Path(__file__).resolve().parents[2] / "demo-repo" / "app.py"
+    original = demo_app.read_text(encoding="utf-8")
+    old_code = '    return {"user_id": user_id, "email": email.lower()}'
+    new_code = (
+        "    if email is None:\n"
+        "        raise HTTPException(\n"
+        "            status_code=422,\n"
+        '            detail="email is required",\n'
+        "        )\n"
+        '    return {"user_id": user_id, "email": email.lower()}'
+    )
+    generator = patch_agent.PatchGenerationService(
+        FakeOllama(
+            {
+                "file_name": "app.py",
+                "explanation": "Reject missing email before calling lower().",
+                "old_code": old_code,
+                "new_code": new_code,
+            }
+        )
+    )
+
+    result = generator.generate(
+        "email may be missing",
+        "email.lower() fails for None",
+        {},
+        repository_files={"app.py": original},
+    )
+
+    assert result.file_name == "app.py"
+    assert result.status == "proposed"
+    diff_lines = result.proposed_diff.splitlines()
+    assert diff_lines[:2] == ["--- a/app.py", "+++ b/app.py"]
+    assert result.proposed_diff == (
+        "--- a/app.py\n"
+        "+++ b/app.py\n"
+        "@@ -5,4 +5,9 @@\n"
+        " \n"
+        " @app.get(\"/profile/{user_id}\")\n"
+        " def get_profile(user_id: str, email: str | None = None) -> dict[str, str]:\n"
+        "+    if email is None:\n"
+        "+        raise HTTPException(\n"
+        "+            status_code=422,\n"
+        '+            detail="email is required",\n'
+        "+        )\n"
+        '     return {"user_id": user_id, "email": email.lower()}\n'
+    )
+    assert "+    if email is None:" in result.proposed_diff
+    assert '+            detail="email is required",' in result.proposed_diff
+    assert " " + old_code in result.proposed_diff
+    assert patch_is_consistent(result)
+
+
+def test_patch_generation_rejects_ambiguous_old_snippet() -> None:
+    generator = patch_agent.PatchGenerationService(
+        FakeOllama(
+            {
+                "file_name": "app.py",
+                "explanation": "Update the value.",
+                "old_code": "return value\n",
+                "new_code": "return fixed_value\n",
+            }
+        )
+    )
+
+    result = generator.generate(
+        "failure",
+        "wrong value is returned",
+        {},
+        repository_files={"app.py": "return value\nreturn value\n"},
+    )
+
+    assert result.status == "unavailable"
+    assert result.proposed_diff == ""
+    assert not patch_is_consistent(result)
+
+
+def test_patch_generation_rejects_overlapping_old_snippet_matches() -> None:
+    generator = patch_agent.PatchGenerationService(
+        FakeOllama(
+            {
+                "file_name": "app.py",
+                "explanation": "Replace the ambiguous snippet.",
+                "old_code": "aba",
+                "new_code": "changed",
+            }
+        )
+    )
+
+    result = generator.generate(
+        "failure",
+        "ambiguous source snippet",
+        {},
+        repository_files={"app.py": "ababa"},
+    )
+
+    assert result.status == "unavailable"
+    assert result.proposed_diff == ""
 
 
 def test_patch_agent_rejects_path_traversal() -> None:
@@ -74,8 +225,9 @@ def test_patch_agent_rejects_path_traversal() -> None:
         FakeOllama(
             {
                 "file_name": "../secrets.txt",
-                "proposed_diff": "diff",
-                "explanation": "Invalid path.",
+                "explanation": "Do not edit files outside the repository.",
+                "old_code": "old",
+                "new_code": "changed",
             }
         )
     )

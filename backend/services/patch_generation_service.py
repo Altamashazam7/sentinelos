@@ -1,8 +1,12 @@
+import difflib
+import logging
 from pathlib import PurePath
 from typing import Any
 
 from models import PatchProposal
 from services.ollama_service import OllamaService
+
+logger = logging.getLogger(__name__)
 
 
 class PatchGenerationService:
@@ -21,17 +25,29 @@ class PatchGenerationService:
             f"File: {file_name}\n{contents}"
             for file_name, contents in (repository_files or {}).items()
         )
+        logger.info(
+            "patch source context prepared: file_count=%d file_names=%s "
+            "source_context_length=%d source_context_preview=%r",
+            len(repository_files or {}),
+            list((repository_files or {}).keys()),
+            len(source_context),
+            source_context[:500],
+            extra={"event": "patch_source_context_prepared"},
+        )
         prompt = (
-            "Generate a safe, minimal proposed unified diff for the incident below. "
-            "Treat the supplied git diff as source-code context. Do not emit an empty "
-            "diff merely because no checkout was provided when the supplied evidence "
-            "identifies a target file and relevant code. If there is not enough "
-            "evidence to safely identify code to change, use an empty diff and explain "
-            "what is missing. Do not claim to apply the patch. Return JSON with keys "
-            "file_name, proposed_diff, explanation. Use exact unified-diff file "
-            "headers and accurate hunk line counts. The diff must be syntactically "
-            "valid and must not modify unrelated files. Incident: "
-            f"{incident_error}\nRoot cause: {root_cause}\n"
+            "Determine the smallest safe code change for the incident below. "
+            "Select exactly one target file from the supplied repository source "
+            "files. Return the exact old_code snippet to replace and its new_code "
+            "replacement. Copy old_code exactly from the source and preserve "
+            "indentation in both snippets; do not produce a diff or return the "
+            "full file. The old_code snippet must occur exactly once in the target "
+            "file. "
+            "Also return a concise explanation of the root cause and intended "
+            "change. Return JSON with string keys file_name, explanation, old_code, "
+            "and new_code. The file_name must exactly match a supplied source file. "
+            "If no source file supports a justified change, return empty strings "
+            "for all fields. Incident: "
+            f"{incident_error}\nRoot cause context: {root_cause}\n"
             f"Repository analysis: {repository_analysis}\n"
             f"Repository source files:\n{source_context}\n"
             f"Additional supplied logs, stack, tests and git diff: {evidence or {}}"
@@ -46,22 +62,38 @@ class PatchGenerationService:
                 ),
             )
         name = result.get("file_name")
-        diff = result.get("proposed_diff")
         explanation = result.get("explanation")
+        old_code = result.get("old_code")
+        new_code = result.get("new_code")
         safe_name = (
-            name
+            name.strip()
             if isinstance(name, str) and name.strip() and not _unsafe_model_path(name)
             else None
         )
-        valid_diff = _strip_code_fence(diff, "diff") if isinstance(diff, str) else ""
+        source = (repository_files or {}).get(safe_name) if safe_name else None
+        valid_explanation = (
+            explanation.strip()
+            if isinstance(explanation, str) and explanation.strip()
+            else ""
+        )
+        valid_diff = (
+            _generate_unified_diff(safe_name, source, old_code, new_code)
+            if safe_name
+            and isinstance(source, str)
+            and isinstance(old_code, str)
+            and old_code
+            and _snippet_occurs_once(source, old_code)
+            and isinstance(new_code, str)
+            and new_code != old_code
+            and valid_explanation
+            else ""
+        )
         return PatchProposal(
             status="proposed" if valid_diff.strip() else "unavailable",
             file_name=safe_name,
             proposed_diff=valid_diff,
             explanation=(
-                explanation.strip()
-                if isinstance(explanation, str) and explanation.strip()
-                else "The model did not provide an explanation."
+                valid_explanation or "The model did not provide a valid file change."
             ),
         )
 
@@ -71,12 +103,28 @@ def _unsafe_model_path(name: str) -> bool:
     return path.is_absolute() or ".." in path.parts or "\\" in name
 
 
-def _strip_code_fence(value: str, language: str) -> str:
-    stripped = value.strip()
-    if stripped.startswith(f"```{language}"):
-        stripped = stripped[len(language) + 3 :].lstrip()
-    elif stripped.startswith("```"):
-        stripped = stripped[3:].lstrip()
-    if stripped.endswith("```"):
-        stripped = stripped[:-3].rstrip()
-    return stripped
+def _snippet_occurs_once(source: str, snippet: str) -> bool:
+    first_match = source.find(snippet)
+    return first_match >= 0 and source.find(snippet, first_match + 1) == -1
+
+
+def _generate_unified_diff(
+    file_name: str,
+    original: str,
+    old_code: str,
+    new_code: str,
+) -> str:
+    updated = original.replace(old_code, new_code, 1)
+    diff = difflib.unified_diff(
+        original.splitlines(keepends=True),
+        updated.splitlines(keepends=True),
+        fromfile=f"a/{file_name}",
+        tofile=f"b/{file_name}",
+        lineterm="\n",
+    )
+    output: list[str] = []
+    for line in diff:
+        output.append(line)
+        if line.startswith((" ", "+", "-")) and not line.endswith(("\n", "\r")):
+            output.append("\n\\ No newline at end of file\n")
+    return "".join(output)

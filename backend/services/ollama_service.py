@@ -38,6 +38,14 @@ class OllamaService:
         generated = self._request_generation(prompt, json_output=True)
         if generated is None:
             return None
+        logger.info(
+            "Ollama JSON generation response received: "
+            f"length={len(generated)} preview={generated[:1000]}",
+            extra={
+                "event": "ollama_json_response",
+                "model": self.model_name,
+            },
+        )
         try:
             parsed = json.loads(generated)
             if not isinstance(parsed, dict):
