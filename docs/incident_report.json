@@ -1,49 +1,66 @@
 {
   "incident": {
-    "repo": "local/sentinel-os-demo",
+    "repo": "acme/checkout-api",
     "branch": "main",
-    "base_branch": "main",
     "error": "GET /profile/{user_id} crashes when email is missing.",
-    "logs": "AttributeError: 'NoneType' object has no attribute 'lower'",
-    "failed_test": "test_profile_requires_email fails because the endpoint raises instead of returning HTTP 422.",
-    "git_diff": "HEAD~1..HEAD changes the missing-email guard to an unguarded email.lower() call."
+    "logs": "F.                                                                       [100%]\n=================================== FAILURES ===================================\n_________________________ test_profile_requires_email __________________________\n\n    def test_profile_requires_email() -> None:",
+    "stack_trace": "b/python3.14/site-packages/httpx2/_client.py:1076: in _send_single_request\n    response = transport.handle_request(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n../backend/.venv/lib/python3.14/site-packages/starlette/testclient.py:354: in handle_request\n    raise exc\n../backend/.venv/lib/python3.14/site-packages/starlette/testclient.py:351: in handle_request\n    portal.call(self.app, scope, receive, send)\n../backend/.venv/lib/python3.14/site-packages/anyio/from_thread.py:340: in call\n    return cast(T_Retval, self.start_task_soon(func, *args).result())\n                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/usr/lib/python3.14/concurrent/futures/_base.py:450: in result\n    return self.__get_result()\n           ^^^^^^^^^^^^^^^^^^^\n/usr/lib/python3.14/concurrent/futures/_base.py:395: in __get_result\n    raise self._exception\n../backend/.venv/lib/python3.14/site-packages/anyio/from_thread.py:265: in _call_func\n    retval = await retval_or_awaitable\n             ^^^^^^^^^^^^^^^^^^^^^^^^^\n../backend/.venv/lib/python3.14/site-packages/fastapi/applications.py:1216: in __call__\n    await super().__call__(scope, receive, send)\n../backend/.venv/lib/python3.14/site-packages/starlette/applications.py:96: in __call__\n    await self.middleware_stack(scope, receive, send)\n../backend/.venv/lib/python3.14/site-packages/starlette/middleware/errors.py:186: in __call__\n    raise exc\n../backend/.venv/lib/python3.14/site-packages/starlette/middleware/errors.py:164: in __call__\n    await self.app(scope, receive, _send)\n../backend/.venv/lib/python3.14/site-packages/fastapi/telemetry/_asgi.py:151: in __call__\n    await self.app(scope, receive, send)\n../backend/.venv/lib/python3.14/site-packages/starlette/middleware/exceptions.py:63: in __call__\n    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)\n../backend/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py:53: in wrapped_app\n    raise exc\n../backend/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py:42: in wrapped_app\n    await app(scope, receive, sender)\n../backend/.venv/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__\n    await self.app(scope, receive, send)\n../backend/.venv/lib/python3.14/site-packages/starlette/routing.py:676: in __call__\n    await self.middleware_stack(scope, receive, send)\n../backend/.venv/lib/python3.14/site-packages/fastapi/routing.py:2809: in app\n    await route.handle(scope, receive, send)\n../backend/.venv/lib/python3.14/site-packages/fastapi/routing.py:1328: in handle\n    await super().handle(scope, receive, send)\n../backend/.venv/lib/python3.14/site-packages/starlette/routing.py:282: in handle\n    await self.app(scope, receive, send)\n../backend/.venv/lib/python3.14/site-packages/fastapi/routing.py:166: in app\n    await wrap_app_handling_exceptions(app, request)(scope, receive, send)\n../backend/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py:53: in wrapped_app\n    raise exc\n../backend/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py:42: in wrapped_app\n    await app(scope, receive, sender)\n../backend/.venv/lib/python3.14/site-packages/fastapi/routing.py:152: in app\n    response = await f(request)\n               ^^^^^^^^^^^^^^^^\n../backend/.venv/lib/python3.14/site-packages/fastapi/routing.py:745: in app\n    raw_response = await run_endpoint_function(\n../backend/.venv/lib/python3.14/site-packages/fastapi/routing.py:374: in run_endpoint_function\n    return await run_in_threadpool(\n../backend/.venv/lib/python3.14/site-packages/starlette/concurrency.py:34: in run_in_threadpool\n    return await anyio.to_thread.run_sync(func)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n../backend/.venv/lib/python3.14/site-packages/anyio/to_thread.py:65: in run_sync\n    return await get_async_backend().run_sync_in_worker_thread(\n../backend/.venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py:2706: in run_sync_in_worker_thread\n    return await future\n           ^^^^^^^^^^^^\n../backend/.venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py:1100: in run\n    result = context.run(func, *args)\n             ^^^^^^^^^^^^^^^^^^^^^^^^\n../backend/.venv/lib/python3.14/site-packages/fastapi/telemetry/_api.py:244: in _run_sync_endpoint\n    return function(**arguments)\n           ^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nuser_id = 'demo-user', email = None\n\n    @app.get(\"/profile/{user_id}\")\n    def get_profile(user_id: str, email: str | None = None) -> dict[str, str]:\n>       return {\"user_id\": user_id, \"email\": email.lower()}\n                                             ^^^^^^^^^^^\nE       AttributeError: 'NoneType' object has no attribute 'lower'\n\napp.py:8: AttributeError\n=========================== short test summary info ============================\nFAILED tests/test_profile.py::test_profile_requires_email - AttributeError: '...\n1 failed, 1 passed in 1.47s",
+    "failed_test": "FAILED tests/test_profile.py::test_profile_requires_email - AttributeError: '...",
+    "git_diff": "diff --git a/backend/agents/root_cause_agent.py b/backend/agents/root_cause_agent.py\nindex 2998544..38206ce 100644\n--- a/backend/agents/root_cause_agent.py\n+++ b/backend/agents/root_cause_agent.py\n@@ -1,10 +1,17 @@\n import logging\n+import re\n from typing import Any, TypedDict\n \n from models import Incident\n from services.ollama_service import OllamaService\n \n logger = logging.getLogger(__name__)\n+_MAX_GIT_DIFF_CHARS = 12_000\n+_DIFF_TRUNCATION_MARKER = \"\\n[git diff truncated]\"\n+_LOCKFILE_PATH = re.compile(\n+    r\"/(?:package-lock\\.json|yarn\\.lock|pnpm-lock\\.yaml|poetry\\.lock|Pipfile\\.lock)\"\n+    r'(?=$|[\\s\"])'\n+)\n \n \n class RootCauseAgentResult(TypedDict):\n@@ -29,7 +36,7 @@ def run(\n         \"logs\": incident.logs or log_result.get(\"finding\"),\n         \"stack_trace\": incident.stack_trace,\n         \"failed_test\": incident.failed_test or test_result.get(\"finding\"),\n-        \"git_diff\": incident.git_diff or git_result.get(\"diff\"),\n+        \"git_diff\": _root_cause_git_diff(incident.git_diff or git_result.get(\"diff\")),\n         \"git\": git_result.get(\"finding\"),\n         \"commits\": git_result.get(\"commits\"),\n         \"tests\": incident.failed_test or test_result.get(\"finding\"),\n@@ -39,6 +46,24 @@ def run(\n     return analyze_evidence(evidence, ollama)\n \n \n+def _root_cause_git_diff(git_diff: str | None) -> str:\n+    if not git_diff:\n+        return \"\"\n+\n+    sections = re.split(r\"(?m)(?=^diff --git )\", git_diff)\n+    relevant_sections = [\n+        section\n+        for section in sections\n+        if section and not _LOCKFILE_PATH.search(section.splitlines()[0])\n+    ]\n+    filtered_diff = \"\".join(relevant_sections)\n+    if len(filtered_diff) <= _MAX_GIT_DIFF_CHARS:\n+        return filtered_diff\n+\n+    content_limit = _MAX_GIT_DIFF_CHARS - len(_DIFF_TRUNCATION_MARKER)\n+    return f\"{filtered_diff[:content_limit]}{_DIFF_TRUNCATION_MARKER}\"\n+\n+\n def analyze_evidence(\n     evidence: dict[str, Any],\n     ollama: OllamaService | None = None,\n@@ -53,7 +78,8 @@ def analyze_evidence(\n         f\"{evidence!r}\"\n     )\n     logger.info(\n-        \"root cause model response received\",\n+        \"root cause model response received: %s\",\n+        model_result,\n         extra={\n             \"event\": \"root_cause_model_response\",\n             \"root_cause_model_result\": model_result,\ndiff --git a/backend/tests/test_root_cause_agent.py b/backend/tests/test_root_cause_agent.py\nnew file mode 100644\nindex 0000000..7ed45bf\n--- /dev/null\n+++ b/backend/tests/test_root_cause_agent.py\n@@ -0,0 +1,115 @@\n+from typing import Any\n+\n+from agents.root_cause_agent import (\n+    _MAX_GIT_DIFF_CHARS,\n+    _root_cause_git_diff,\n+)\n+from agents.root_cause_agent import (\n+    run as run_root_cause_agent,\n+)\n+from models import Incident\n+from services.ollama_service import OllamaService\n+\n+\n+class PromptCapturingOllama(OllamaService):\n+    def __init__(self) -> None:\n+        self.prompt = \"\"\n+\n+    def generate_json(self, prompt: str) -> dict[str, Any]:\n+        self.prompt = prompt\n+        return {\n+            \"root_cause\": \"The handler calls lower() on a missing email.\",\n+            \"confidence\": 0.95,\n+            \"evidence\": [\"The stack trace shows email is None.\"],\n+        }\n+\n+\n+def test_root_cause_excludes_lockfile_diffs_and_keeps_incident_evidence() -> None:\n+    lockfiles = (\n+        \"package-lock.json\",\n+        \"yarn.lock\",\n+        \"pnpm-lock.yaml\",\n+        \"poetry.lock\",\n+        \"Pipfile.lock\",\n+    )\n+    lockfile_diffs = \"\\n\".join(\n+        (\n+            f\"diff --git a/frontend/{name} b/frontend/{name}\\n\"\n+            f\"--- a/frontend/{name}\\n\"\n+            f\"+++ b/frontend/{name}\\n\"\n+            '+  \"resolved\": \"https://registry.example/package.tgz\",\\n'\n+            '+  \"integrity\": \"sha512-package-metadata\",\\n'\n+            '+  \"license\": \"ISC\"\\n'\n+        )\n+        for name in lockfiles\n+    )\n+    incident_diff = (\n+        \"diff --git a/app.py b/app.py\\n\"\n+        \"--- a/app.py\\n\"\n+        \"+++ b/app.py\\n\"\n+        \"@@ -1 +1 @@\\n\"\n+        \"-email.lower()\\n\"\n+        '+(email or \"\").lower()\\n'\n+    )\n+    ollama = PromptCapturingOllama()\n+\n+    run_root_cause_agent(\n+        Incident(\n+            repo=\"owner/repo\",\n+            branch=\"main\",\n+            error=\"Profile request crashes when email is missing.\",\n+            logs=\"AttributeError: 'NoneType' object has no attribute 'lower'\",\n+            stack_trace=\"app.py:8 in get_profile; email is None\",\n+            failed_test=\"test_profile_requires_email failed\",\n+            git_diff=lockfile_diffs + incident_diff,\n+        ),\n+        log_result={},\n+        git_result={},\n+        test_result={},\n+        dependency_result={},\n+        ollama=ollama,\n+    )\n+\n+    assert \"resolved\" not in ollama.prompt\n+    assert \"integrity\" not in ollama.prompt\n+    assert \"license\" not in ollama.prompt\n+    assert \"package-lock.json\" not in ollama.prompt\n+    assert \"yarn.lock\" not in ollama.prompt\n+    assert \"pnpm-lock.yaml\" not in ollama.prompt\n+    assert \"poetry.lock\" not in ollama.prompt\n+    assert \"Pipfile.lock\" not in ollama.prompt\n+    assert \"diff --git a/app.py b/app.py\" in ollama.prompt\n+    assert '+(email or \"\").lower()' in ollama.prompt\n+    assert \"AttributeError: 'NoneType' object has no attribute 'lower'\" in ollama.prompt\n+    assert \"app.py:8 in get_profile; email is None\" in ollama.prompt\n+    assert \"test_profile_requires_email failed\" in ollama.prompt\n+\n+\n+def test_root_cause_caps_git_diff_without_truncating_incident_evidence() -> None:\n+    oversized_diff = \"diff --git a/app.py b/app.py\\n\" + (\"x\" * 20_000)\n+    capped_diff = _root_cause_git_diff(oversized_diff)\n+    ollama = PromptCapturingOllama()\n+\n+    run_root_cause_agent(\n+        Incident(\n+            repo=\"owner/repo\",\n+            branch=\"main\",\n+            error=\"Profile request crashes when email is missing.\",\n+            logs=\"critical log evidence\",\n+            stack_trace=\"critical stack trace evidence\",\n+            failed_test=\"critical failed-test evidence\",\n+            git_diff=oversized_diff,\n+        ),\n+        log_result={},\n+        git_result={},\n+        test_result={},\n+        dependency_result={},\n+        ollama=ollama,\n+    )\n+\n+    assert len(capped_diff) == _MAX_GIT_DIFF_CHARS\n+    assert capped_diff.endswith(\"[git diff truncated]\")\n+    assert len(ollama.prompt.split(\"Evidence: \", maxsplit=1)[1]) < 13_000\n+    assert \"critical log evidence\" in ollama.prompt\n+    assert \"critical stack trace evidence\" in ollama.prompt\n+    assert \"critical failed-test evidence\" in ollama.prompt",
+    "local_path": "/home/altamash/sentinelos/sentinelos/demo-repo",
+    "base_branch": "main",
+    "id": "6e757394-09d2-430e-9959-e6920edc547a",
+    "status": "received",
+    "created_at": "2026-10-22T11:01:21.702475Z"
   },
   "root_cause": {
-    "status": "fixture_evidence",
-    "cause": "The optional email parameter is dereferenced with .lower() before checking whether it is None.",
-    "confidence": 1.0,
-    "evidence": [
-      "email is declared optional in the endpoint signature.",
-      "The failing test requests the endpoint without email.",
-      "The traceback reports NoneType has no attribute lower."
-    ]
+    "status": "unavailable",
+    "cause": "",
+    "confidence": 0.0,
+    "evidence": []
   },
   "patch": {
-    "status": "not_applied",
-    "file_name": "app.py",
-    "proposed_diff": "--- a/app.py\n+++ b/app.py\n@@ -5,3 +5,5 @@\n @app.get(\"/profile/{user_id}\")\n def get_profile(user_id: str, email: str | None = None) -> dict[str, str]:\n+    if email is None:\n+        raise HTTPException(status_code=422, detail=\"email is required\")\n     return {\"user_id\": user_id, \"email\": email.lower()}\n",
-    "explanation": "Reject the missing optional email with the API's expected 422 response before normalizing it."
+    "agent": "PatchAgent",
+    "status": "unavailable",
+    "file_name": null,
+    "proposed_diff": "",
+    "explanation": "No patch was generated because the configured Ollama service did not return a valid JSON response.",
+    "applied": false
   },
   "tests": {
-    "status": "present_in_demo_repository",
-    "generated_test_code": "from fastapi.testclient import TestClient\n\nfrom app import app\n\n\ndef test_profile_requires_email():\n    client = TestClient(app)\n    response = client.get(\"/profile/demo-user\")\n    assert response.status_code == 422\n    assert response.json() == {\"detail\": \"email is required\"}\n",
-    "expected_result": "A request without email returns HTTP 422 and does not raise AttributeError."
+    "agent": "RegressionTestAgent",
+    "status": "unavailable",
+    "generated_test_code": "",
+    "expected_result": "Ollama did not return a regression suite; no tests were generated.",
+    "edge_cases": [],
+    "executed": false,
+    "output": null
   },
   "validation": {
-    "status": "not_run",
+    "agent": "ValidationAgent",
+    "status": "blocked",
     "passed": false,
-    "report": "This checked-in fixture describes the reproducible incident. Run POST /demo/run to record actual sandbox validation."
+    "report": "Validation blocked: patch_generated, patch_consistent, regression_test_generated, regression_test_syntax_valid, patch_applied, tests_passed",
+    "checks": {
+      "patch_generated": false,
+      "patch_consistent": false,
+      "regression_test_generated": false,
+      "regression_test_syntax_valid": false,
+      "patch_applied": false,
+      "repository_available": true,
+      "test_runner_configured": true,
+      "worktree_changes_valid": true,
+      "tests_passed": false
+    }
   },
   "pr": {
     "agent": "PullRequestAgent",
-    "status": "not_created",
-    "branch": null,
-    "title": "Fix missing email handling in GET /profile/{user_id}",
-    "description": "Validate that email is present before lowercasing it. The missing-email regression test must pass in the sandbox before a branch is pushed.",
-    "changed_files": [
-      "app.py"
-    ],
+    "status": "blocked",
+    "title": "Fix incident: GET /profile/{user_id} crashes when email is missing.",
+    "description": "## Incident\nGET /profile/{user_id} crashes when email is missing.\n\n## Proposed change\nNo patch was generated because the configured Ollama service did not return a valid JSON response.\n\n```diff\n\n```\n\nValidation: blocked.",
+    "changed_files": [],
     "url": null,
-    "reason": "A live PR is created only after a configured demo run passes validation and pushes its branch."
+    "reason": "A pull request requires an applied patch and passing validation.",
+    "branch": null
   }
 }
