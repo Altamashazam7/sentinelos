@@ -214,9 +214,7 @@ class IncidentCommander:
             and file_name not in test_files
         )[:10]
         repository_files = (
-            self._repository.read_files(path, source_files)
-            if path is not None
-            else {}
+            self._repository.read_files(path, source_files) if path is not None else {}
         )
         return {
             "repository_path": path,

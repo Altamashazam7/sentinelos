@@ -116,7 +116,7 @@ def test_patch_generation_prompt_requests_snippets_and_matching_source() -> None
     assert "new_code replacement" in ollama.prompt
     assert "do not produce a diff" in ollama.prompt
     assert "AttributeError: 'NoneType' object has no attribute 'lower'" in ollama.prompt
-    assert "File: app.py\nreturn {\"email\": email.lower()}" in ollama.prompt
+    assert 'File: app.py\nreturn {"email": email.lower()}' in ollama.prompt
 
 
 def test_patch_generation_builds_consistent_app_py_diff_from_snippets() -> None:
@@ -158,7 +158,7 @@ def test_patch_generation_builds_consistent_app_py_diff_from_snippets() -> None:
         "+++ b/app.py\n"
         "@@ -5,4 +5,9 @@\n"
         " \n"
-        " @app.get(\"/profile/{user_id}\")\n"
+        ' @app.get("/profile/{user_id}")\n'
         " def get_profile(user_id: str, email: str | None = None) -> dict[str, str]:\n"
         "+    if email is None:\n"
         "+        raise HTTPException(\n"
