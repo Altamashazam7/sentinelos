@@ -12,8 +12,8 @@ from models import (
     IncidentAnalysisResponse,
     IncidentReport,
 )
-from services.ollama_service import OllamaService
 from services.memory_service import MemoryService
+from services.ollama_service import OllamaService
 from services.patch_generation_service import PatchGenerationService
 from services.repository_service import RepositoryService
 from services.test_generation_service import RegressionTestGenerator
@@ -74,12 +74,8 @@ class IncidentAnalysisService:
         self._config = config
         self._ollama = ollama or OllamaService(config)
         self._repository = repository or RepositoryService(config)
-        self._patch_generator = patch_generator or PatchGenerationService(
-            self._ollama
-        )
-        self._test_generator = test_generator or RegressionTestGenerator(
-            self._ollama
-        )
+        self._patch_generator = patch_generator or PatchGenerationService(self._ollama)
+        self._test_generator = test_generator or RegressionTestGenerator(self._ollama)
 
     def analyze(
         self,

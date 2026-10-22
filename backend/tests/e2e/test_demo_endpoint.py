@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from api.routes import get_demo_service
 from main import app
 from models import DemoRunResponse
+from services.demo_service import DemoDisabledError
 
 
 def test_demo_run_endpoint_returns_complete_status_contract() -> None:
@@ -34,7 +35,19 @@ def test_demo_run_endpoint_returns_complete_status_contract() -> None:
 
 
 def test_demo_run_endpoint_is_disabled_by_default() -> None:
-    response = TestClient(app).post("/demo/run")
+    class DisabledDemoService:
+        def run(self):
+            raise DemoDisabledError(
+                "Demo mode is disabled. Set SENTINELOS_DEMO_ENABLED=true "
+                "for a dedicated disposable demo checkout."
+            )
+
+    app.dependency_overrides[get_demo_service] = lambda: DisabledDemoService()
+
+    try:
+        response = TestClient(app).post("/demo/run")
+    finally:
+        app.dependency_overrides.pop(get_demo_service, None)
 
     assert response.status_code == 403
     assert "SENTINELOS_DEMO_ENABLED=true" in response.json()["detail"]

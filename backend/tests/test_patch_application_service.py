@@ -1,5 +1,5 @@
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
 from core.config import Settings
 from models import Incident, PatchProposal, RegressionTestReport
@@ -120,7 +120,13 @@ def test_patch_application_validates_commits_and_pushes_isolated_branch(
     assert source.joinpath("src", "handler.py").read_text() == "old\n"
     assert (
         subprocess.run(
-            ["git", "--git-dir", str(remote), "show", f"{result.branch}:src/handler.py"],
+            [
+                "git",
+                "--git-dir",
+                str(remote),
+                "show",
+                f"{result.branch}:src/handler.py",
+            ],
             capture_output=True,
             text=True,
             check=True,
@@ -149,12 +155,17 @@ def test_patch_application_does_not_commit_or_push_when_tests_fail(
     assert result.pushed is False
     assert result.branch is None
     remote_branch = subprocess.run(
-        ["git", "--git-dir", str(remote), "show-ref", "--verify",
-         "refs/heads/sentinelos/fix-123456781234"],
+        [
+            "git",
+            "--git-dir",
+            str(remote),
+            "show-ref",
+            "--verify",
+            "refs/heads/sentinelos/fix-123456781234",
+        ],
         capture_output=True,
         text=True,
         check=False,
     )
     assert remote_branch.returncode != 0
     assert source.joinpath("src", "handler.py").read_text() == "old\n"
-

@@ -1,32 +1,73 @@
+import logging
 from collections.abc import Callable
+from itertools import pairwise
 from pathlib import Path
 from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from agents import dependency_agent, git_agent, log_agent, patch_agent
-from agents import pull_request_agent, regression_test_agent, root_cause_agent, test_agent
-from agents import validation_agent
+from agents import (
+    dependency_agent,
+    git_agent,
+    log_agent,
+    patch_agent,
+    pull_request_agent,
+    regression_test_agent,
+    root_cause_agent,
+    test_agent,
+    validation_agent,
+)
 from core.config import Settings, settings
 from models import (
     AgentResult,
     ApplyFixResponse,
     Incident,
-    PatchProposal,
     IncidentReport,
     IncidentStatus,
+    PatchProposal,
     PullRequestReport,
     RegressionTestReport,
     ValidationReport,
 )
 from services.docker_sandbox_service import DockerSandboxService
 from services.github_service import GitHubService
+from services.memory_service import MemoryService
 from services.ollama_service import OllamaService
 from services.patch_application_service import PatchApplicationService
 from services.patch_generation_service import PatchGenerationService
 from services.repository_service import RepositoryService
-from services.memory_service import MemoryService
 from services.test_generation_service import RegressionTestGenerator
+
+logger = logging.getLogger(__name__)
+
+
+_SOURCE_FILE_SUFFIXES = frozenset(
+    {
+        ".c",
+        ".cc",
+        ".cpp",
+        ".cs",
+        ".go",
+        ".h",
+        ".hpp",
+        ".java",
+        ".js",
+        ".jsx",
+        ".kt",
+        ".php",
+        ".py",
+        ".pyi",
+        ".rb",
+        ".rs",
+        ".scala",
+        ".sh",
+        ".sql",
+        ".swift",
+        ".ts",
+        ".tsx",
+        ".vue",
+    }
+)
 
 
 class SwarmState(TypedDict, total=False):
@@ -34,6 +75,7 @@ class SwarmState(TypedDict, total=False):
     activity_callback: Callable[[dict[str, Any]], None] | None
     repository_path: Path | None
     repository_analysis: dict[str, Any]
+    repository_files: dict[str, str]
     log_result: dict[str, Any]
     git_result: dict[str, Any]
     test_result: dict[str, Any]
@@ -102,7 +144,7 @@ class IncidentCommander:
             )
         graph.add_edge(START, "repository_analysis")
         stages = list(nodes)
-        for current, following in zip(stages, stages[1:]):
+        for current, following in pairwise(stages):
             graph.add_edge(current, following)
         graph.add_edge(stages[-1], END)
         return graph.compile()
@@ -153,10 +195,31 @@ class IncidentCommander:
         return result
 
     def _repository_analysis(self, state: SwarmState) -> dict[str, Any]:
-        path = self._repository.resolve_repository(state["incident"].local_path)
+        local_path = state["incident"].local_path
+        logger.info(
+            "resolving incident repository path: local_path=%s local_path_repr=%r "
+            "repository_root=%s",
+            local_path,
+            local_path,
+            self._config.repository_root,
+            extra={"event": "repository_path_resolution_requested"},
+        )
+        path = self._repository.resolve_repository(local_path)
+        analysis = self._repository.analyze(path)
+        test_files = set(analysis["test_files"])
+        source_files = sorted(
+            file_name
+            for file_name in analysis["files"]
+            if Path(file_name).suffix.lower() in _SOURCE_FILE_SUFFIXES
+            and file_name not in test_files
+        )[:10]
+        repository_files = (
+            self._repository.read_files(path, source_files) if path is not None else {}
+        )
         return {
             "repository_path": path,
-            "repository_analysis": self._repository.analyze(path),
+            "repository_analysis": analysis,
+            "repository_files": repository_files,
         }
 
     @staticmethod
@@ -176,9 +239,7 @@ class IncidentCommander:
 
     @staticmethod
     def _dependency_agent(state: SwarmState) -> dict[str, Any]:
-        return {
-            "dependency_result": dependency_agent.run(state["repository_path"])
-        }
+        return {"dependency_result": dependency_agent.run(state["repository_path"])}
 
     def _root_cause_agent(self, state: SwarmState) -> dict[str, Any]:
         return {
@@ -203,12 +264,13 @@ class IncidentCommander:
                 state["root_result"]["root_cause"],
                 state["repository_analysis"],
                 self._patch_generator,
-                {
+                evidence={
                     "logs": state["incident"].logs or "",
                     "stack_trace": state["incident"].stack_trace or "",
                     "failed_test": state["incident"].failed_test or "",
                     "git_diff": state["incident"].git_diff or "",
                 },
+                repository_files=state["repository_files"],
             )
         }
 
@@ -257,11 +319,15 @@ class IncidentCommander:
         status = (
             IncidentStatus.PULL_REQUEST_CREATED
             if pull_request.status == "created"
-            else IncidentStatus.VALIDATED
-            if validation.passed
-            else IncidentStatus.FAILED
-            if validation.status == "failed"
-            else IncidentStatus.BLOCKED
+            else (
+                IncidentStatus.VALIDATED
+                if validation.passed
+                else (
+                    IncidentStatus.FAILED
+                    if validation.status == "failed"
+                    else IncidentStatus.BLOCKED
+                )
+            )
         )
         updated_incident = incident.model_copy(update={"status": status})
         agent_results = [
@@ -275,9 +341,7 @@ class IncidentCommander:
             AgentResult(
                 agent=str(result["agent"]),
                 status=str(result["status"]),
-                finding=str(
-                    result.get("finding", result.get("root_cause", ""))
-                ),
+                finding=str(result.get("finding", result.get("root_cause", ""))),
                 details={
                     key: value
                     for key, value in result.items()
@@ -339,7 +403,7 @@ class IncidentCommander:
         )
         report = state.get("report")
         if not isinstance(report, IncidentReport):
-            raise RuntimeError("Incident workflow ended without an incident report.")
+            raise TypeError("Incident workflow ended without an incident report.")
         return report
 
     def apply_fix(
@@ -376,9 +440,7 @@ class IncidentCommander:
             regression_test.generated_test_code,
             application.validation.status,
         )
-        applied_patch = patch.model_copy(
-            update={"status": "applied", "applied": True}
-        )
+        applied_patch = patch.model_copy(update={"status": "applied", "applied": True})
         pull_request = pull_request_agent.run(
             incident,
             applied_patch,
@@ -392,11 +454,7 @@ class IncidentCommander:
             validation=application.validation.status,
             ready_for_pr=True,
             pull_request_url=pull_request.url,
-            message=(
-                None
-                if pull_request.status == "created"
-                else pull_request.reason
-            ),
+            message=(None if pull_request.status == "created" else pull_request.reason),
             validation_report=application.validation,
             pull_request_report=pull_request,
         )
@@ -430,16 +488,18 @@ def _stage_message(agent: str, result: dict[str, Any]) -> str:
     elif agent == "RegressionTestAgent":
         value = result.get("regression_result")
         value = (
-            value.expected_result
-            if isinstance(value, RegressionTestReport)
-            else value
+            value.expected_result if isinstance(value, RegressionTestReport) else value
         )
     elif agent == "ValidationAgent":
         value = result.get("validation_result")
         value = value.report if isinstance(value, ValidationReport) else value
     elif agent == "PullRequestAgent":
         value = result.get("pull_request_result")
-        value = value.reason or value.title if isinstance(value, PullRequestReport) else value
+        value = (
+            value.reason or value.title
+            if isinstance(value, PullRequestReport)
+            else value
+        )
     elif agent == "IncidentReport":
         value = result.get("report")
         value = value.status.value if isinstance(value, IncidentReport) else value
@@ -488,19 +548,37 @@ def _stage_data(agent: str, result: dict[str, Any]) -> dict[str, Any]:
         return result.get("root_result", {})
     if agent == "PatchAgent":
         proposal = result.get("patch_result")
-        return proposal.model_dump(mode="json") if isinstance(proposal, PatchProposal) else {}
+        return (
+            proposal.model_dump(mode="json")
+            if isinstance(proposal, PatchProposal)
+            else {}
+        )
     if agent == "RegressionTestAgent":
         report = result.get("regression_result")
-        return report.model_dump(mode="json") if isinstance(report, RegressionTestReport) else {}
+        return (
+            report.model_dump(mode="json")
+            if isinstance(report, RegressionTestReport)
+            else {}
+        )
     if agent == "ValidationAgent":
         report = result.get("validation_result")
-        return report.model_dump(mode="json") if isinstance(report, ValidationReport) else {}
+        return (
+            report.model_dump(mode="json")
+            if isinstance(report, ValidationReport)
+            else {}
+        )
     if agent == "PullRequestAgent":
         report = result.get("pull_request_result")
-        return report.model_dump(mode="json") if isinstance(report, PullRequestReport) else {}
+        return (
+            report.model_dump(mode="json")
+            if isinstance(report, PullRequestReport)
+            else {}
+        )
     if agent == "IncidentReport":
         report = result.get("report")
-        return report.model_dump(mode="json") if isinstance(report, IncidentReport) else {}
+        return (
+            report.model_dump(mode="json") if isinstance(report, IncidentReport) else {}
+        )
     return {}
 
 

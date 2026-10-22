@@ -1,10 +1,13 @@
+import logging
 import os
-from pathlib import Path
 import subprocess
+from pathlib import Path
 from typing import Any
 
 from core.config import Settings, settings
 from services.git_utils import git_command
+
+logger = logging.getLogger(__name__)
 
 
 class RepositoryService:
@@ -20,6 +23,17 @@ class RepositoryService:
             )
         root = Path(self._config.repository_root).expanduser().resolve()
         candidate = Path(requested_path).expanduser().resolve()
+        logger.info(
+            "repository path resolved: requested_path=%s requested_path_repr=%r "
+            "root=%s candidate=%s candidate_exists=%s candidate_is_dir=%s",
+            requested_path,
+            requested_path,
+            root,
+            candidate,
+            candidate.exists(),
+            candidate.is_dir(),
+            extra={"event": "repository_path_resolution_checked"},
+        )
         if not candidate.is_relative_to(root):
             raise ValueError(
                 "Repository path must be inside SENTINELOS_REPOSITORY_ROOT."
@@ -43,8 +57,7 @@ class RepositoryService:
             subdirectories[:] = [
                 name
                 for name in subdirectories
-                if name not in ignored
-                and not (Path(directory) / name).is_symlink()
+                if name not in ignored and not (Path(directory) / name).is_symlink()
             ]
             for filename in filenames:
                 candidate = Path(directory) / filename
@@ -88,7 +101,9 @@ class RepositoryService:
             for part in Path(relative_path).parts:
                 current = current / part
                 if current.is_symlink():
-                    raise ValueError("Symbolic links cannot be read as repository files.")
+                    raise ValueError(
+                        "Symbolic links cannot be read as repository files."
+                    )
             try:
                 candidate = unresolved.resolve(strict=True)
             except FileNotFoundError as exc:

@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 
 from api.routes import router
 from core.logging_config import configure_logging
-from models import Incident, IncidentRequest, IncidentReport
+from models import Incident, IncidentReport, IncidentRequest
 from services.incident_service import incident_service
 
 configure_logging()

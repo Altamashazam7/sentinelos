@@ -1,7 +1,10 @@
+import logging
 from typing import Any, TypedDict
 
 from models import Incident
 from services.ollama_service import OllamaService
+
+logger = logging.getLogger(__name__)
 
 
 class RootCauseAgentResult(TypedDict):
@@ -49,6 +52,19 @@ def analyze_evidence(
         "is insufficient, say so instead of inventing a cause. Evidence: "
         f"{evidence!r}"
     )
+    logger.info(
+        "root cause model response received",
+        extra={
+            "event": "root_cause_model_response",
+            "root_cause_model_result": model_result,
+            "root_cause_value": (
+                model_result.get("root_cause") if model_result is not None else None
+            ),
+            "confidence_value": (
+                model_result.get("confidence") if model_result is not None else None
+            ),
+        },
+    )
     cause = model_result.get("root_cause") if model_result else None
     confidence = model_result.get("confidence", 0.0) if model_result else 0.0
     if not isinstance(cause, str) or not cause.strip():
@@ -66,8 +82,7 @@ def analyze_evidence(
                 for item in model_result.get("evidence", [])
                 if isinstance(item, (str, int, float))
             ][:20]
-            if model_result
-            and isinstance(model_result.get("evidence", []), list)
+            if model_result and isinstance(model_result.get("evidence", []), list)
             else []
         ),
     }

@@ -38,10 +38,18 @@ class OllamaService:
         generated = self._request_generation(prompt, json_output=True)
         if generated is None:
             return None
+        logger.info(
+            "Ollama JSON generation response received: "
+            f"length={len(generated)} preview={generated[:1000]}",
+            extra={
+                "event": "ollama_json_response",
+                "model": self.model_name,
+            },
+        )
         try:
             parsed = json.loads(generated)
             if not isinstance(parsed, dict):
-                raise ValueError("Ollama response JSON must be an object.")
+                raise TypeError("Ollama response JSON must be an object.")
             return parsed
         except (json.JSONDecodeError, ValueError) as exc:
             logger.warning(
@@ -80,7 +88,7 @@ class OllamaService:
                 body = response.json()
                 generated = body.get("response") if isinstance(body, dict) else None
                 if not isinstance(generated, str):
-                    raise ValueError("Ollama returned no generated response.")
+                    raise TypeError("Ollama returned no generated response.")
                 return generated
             except httpx.HTTPError as exc:
                 retryable = not isinstance(exc, httpx.HTTPStatusError) or (

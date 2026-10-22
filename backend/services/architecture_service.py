@@ -1,8 +1,7 @@
-from core.config import Settings, settings
 from agents.architecture_agent import (
-    ArchitectureAnalysisUnavailable,
     run as run_architecture_agent,
 )
+from core.config import Settings, settings
 from models import ArchitectureEvolutionRequest, ArchitectureEvolutionResponse
 from services.memory_service import MemoryService
 from services.ollama_service import OllamaService
@@ -36,9 +35,7 @@ class ArchitectureEvolutionService:
             local_repository.name if local_repository is not None else None
         )
         incidents = (
-            self._memory.recent_incidents(memory_key, limit=50)
-            if memory_key
-            else []
+            self._memory.recent_incidents(memory_key, limit=50) if memory_key else []
         )
         if not repository_analysis.get("available") and not incidents:
             raise ValueError(

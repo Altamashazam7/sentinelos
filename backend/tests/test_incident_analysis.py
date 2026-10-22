@@ -25,19 +25,16 @@ class EvidenceOllama(OllamaService):
                 "confidence": 0.92,
                 "evidence": ["The stack trace points to handler.py:18."],
             }
-        if "proposed unified diff" in prompt:
+        if "exact old_code snippet" in prompt:
             return {
                 "file_name": "app/handler.py",
-                "proposed_diff": (
-                    "--- a/app/handler.py\n+++ b/app/handler.py\n"
-                    "@@ -1 +1 @@\n-old\n+new\n"
-                ),
                 "explanation": "Guard the missing value.",
+                "old_code": "old_value",
+                "new_code": "raise ValueError()",
             }
         return {
             "generated_test_code": (
-                "def test_missing_value():\n"
-                "    assert handle(None) == 'invalid'\n"
+                "def test_missing_value():\n" "    assert handle(None) == 'invalid'\n"
             ),
             "expected_result": "Missing values return a validation error.",
             "edge_cases": ["None", "empty string", "whitespace-only string"],
@@ -70,14 +67,12 @@ def test_incident_analysis_forwards_all_evidence_and_returns_model_content() -> 
     result = service.analyze(request)
 
     assert result.root_cause == "The changed handler dereferences a missing value."
-    assert result.patch.startswith("--- a/app/handler.py")
+    assert result.patch == ""
     assert "def test_missing_value" in result.generated_tests
     assert result.edge_cases == ["None", "empty string", "whitespace-only string"]
     assert len(ollama.prompts) == 3
-    assert (
-        "Do not emit an empty diff merely because no checkout was provided"
-        in ollama.prompts[1]
-    )
+    assert "exact old_code snippet" in ollama.prompts[1]
+    assert "new_code replacement" in ollama.prompts[1]
     assert all("request failed" in prompt for prompt in ollama.prompts)
     assert all("File app/handler.py, line 18" in prompt for prompt in ollama.prompts)
     assert all("test_checkout raised TypeError" in prompt for prompt in ollama.prompts)
@@ -95,4 +90,6 @@ def test_analysis_does_not_fabricate_root_cause_when_ollama_is_unavailable() -> 
     except OllamaUnavailableError as exc:
         assert "Ollama" in str(exc)
     else:
-        raise AssertionError("Unavailable Ollama must not produce a fabricated analysis.")
+        raise AssertionError(
+            "Unavailable Ollama must not produce a fabricated analysis."
+        )

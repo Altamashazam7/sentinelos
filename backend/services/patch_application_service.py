@@ -1,10 +1,10 @@
 import base64
-from dataclasses import dataclass
 import logging
 import os
-from pathlib import Path, PurePosixPath
 import re
 import subprocess
+from dataclasses import dataclass
+from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
 
 from agents import validation_agent
@@ -58,7 +58,9 @@ class PatchApplicationService:
         if repository is None:
             raise ValueError("local_path is required to apply a patch.")
         if not validation_agent.patch_is_consistent(patch):
-            return self._blocked("Patch is missing or is not a consistent unified diff.")
+            return self._blocked(
+                "Patch is missing or is not a consistent unified diff."
+            )
         changed_files = _changed_files(patch.proposed_diff)
         if not changed_files:
             return self._blocked("The patch does not identify any changed files.")
@@ -84,9 +86,13 @@ class PatchApplicationService:
                 check=False,
             )
             if existing_branch.returncode == 0:
-                raise PatchApplicationError("The generated patch branch already exists.")
+                raise PatchApplicationError(
+                    "The generated patch branch already exists."
+                )
             if existing_branch.returncode != 1:
-                raise PatchApplicationError("Could not check whether the patch branch exists.")
+                raise PatchApplicationError(
+                    "Could not check whether the patch branch exists."
+                )
 
             temp_dir = TemporaryDirectory(prefix="sentinelos-worktree-")
             worktree = Path(temp_dir.name) / "checkout"
@@ -235,7 +241,9 @@ class PatchApplicationService:
                     )
 
     def _require_clean_repository(self, repository: Path) -> None:
-        self._run_git(repository, ["rev-parse", "--show-toplevel"], "locate Git repository")
+        self._run_git(
+            repository, ["rev-parse", "--show-toplevel"], "locate Git repository"
+        )
         status = self._run_git(
             repository,
             ["status", "--porcelain", "--untracked-files=all"],
@@ -247,23 +255,27 @@ class PatchApplicationService:
             )
 
     def _require_origin(self, repository: Path) -> None:
-        self._run_git(repository, ["remote", "get-url", "origin"], "check origin remote")
+        self._run_git(
+            repository, ["remote", "get-url", "origin"], "check origin remote"
+        )
 
     def _validate_ref(self, repository: Path, ref: str) -> None:
-        if not ref or self._run_git(
-            repository,
-            ["check-ref-format", "--branch", ref],
-            "validate the requested base branch",
-            check=False,
-        ).returncode != 0:
+        if (
+            not ref
+            or self._run_git(
+                repository,
+                ["check-ref-format", "--branch", ref],
+                "validate the requested base branch",
+                check=False,
+            ).returncode
+            != 0
+        ):
             raise PatchApplicationError("The requested base branch name is invalid.")
 
     def _git_file_list(self, repository: Path, args: list[str]) -> list[str]:
         output = self._run_git(repository, args, "inspect changed files").stdout
         return sorted(
-            line.replace("\\", "/")
-            for line in output.splitlines()
-            if line.strip()
+            line.replace("\\", "/") for line in output.splitlines() if line.strip()
         )
 
     def _actual_changed_files(self, repository: Path) -> list[str]:
@@ -300,7 +312,9 @@ class PatchApplicationService:
                 f"Could not {operation}; verify Git is installed and the operation can complete."
             ) from exc
         if check and result.returncode != 0:
-            raise PatchApplicationError(f"Could not {operation} (git exit {result.returncode}).")
+            raise PatchApplicationError(
+                f"Could not {operation} (git exit {result.returncode})."
+            )
         return result
 
     @staticmethod
@@ -337,7 +351,7 @@ def _changed_files(diff: str) -> list[str]:
         selected = new_path if new_path != "/dev/null" else old_path
         if selected in {"/dev/null", "a/", "b/"}:
             continue
-        if selected.startswith("a/") or selected.startswith("b/"):
+        if selected.startswith(("a/", "b/")):
             selected = selected[2:]
         files.add(selected)
     return sorted(files)
@@ -386,9 +400,7 @@ def _push_environment(token: str | None) -> dict[str, str] | None:
     if not token:
         return None
     environment = os.environ.copy()
-    credential = base64.b64encode(
-        f"x-access-token:{token}".encode("utf-8")
-    ).decode("ascii")
+    credential = base64.b64encode(f"x-access-token:{token}".encode()).decode("ascii")
     environment["GIT_CONFIG_COUNT"] = "1"
     environment["GIT_CONFIG_KEY_0"] = "http.extraheader"
     environment["GIT_CONFIG_VALUE_0"] = f"AUTHORIZATION: basic {credential}"

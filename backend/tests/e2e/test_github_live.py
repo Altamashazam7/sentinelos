@@ -19,9 +19,7 @@ def test_live_github_branch_commit_and_pull_request() -> None:
         pytest.skip("Set SENTINELOS_LIVE_GITHUB=1 to enable live GitHub writes.")
     repository = os.getenv("SENTINELOS_E2E_REPO", "")
     if not settings.github_token or not repository:
-        pytest.fail(
-            "Live GitHub mode requires GITHUB_TOKEN and SENTINELOS_E2E_REPO."
-        )
+        pytest.fail("Live GitHub mode requires GITHUB_TOKEN and SENTINELOS_E2E_REPO.")
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
         pytest.fail("SENTINELOS_E2E_REPO must be an owner/repository slug.")
 

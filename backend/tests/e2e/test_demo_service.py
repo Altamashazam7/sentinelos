@@ -45,11 +45,16 @@ def test_broken_demo_endpoint_reproduces_the_incident() -> None:
 def test_checked_in_incident_report_contains_valid_patch() -> None:
     project_root = Path(__file__).resolve().parents[3]
     report = json.loads(
-        (project_root / "docs" / "incident_report.json").read_text(
-            encoding="utf-8"
-        )
+        (project_root / "docs" / "incident_report.json").read_text(encoding="utf-8")
     )
-    assert set(report) == {"incident", "root_cause", "patch", "tests", "validation", "pr"}
+    assert set(report) == {
+        "incident",
+        "root_cause",
+        "patch",
+        "tests",
+        "validation",
+        "pr",
+    }
     assert patch_is_consistent(PatchProposal(**report["patch"]))
 
 
@@ -60,10 +65,10 @@ def test_demo_fixture_can_build_a_recent_regression_diff(tmp_path: Path) -> None
     demo_repository.mkdir()
     broken_source = (demo_fixture / "app.py").read_text(encoding="utf-8")
     healthy_source = broken_source.replace(
-        "    return {\"user_id\": user_id, \"email\": email.lower()}",
+        '    return {"user_id": user_id, "email": email.lower()}',
         "    if email is None:\n"
-        "        raise HTTPException(status_code=422, detail=\"email is required\")\n"
-        "    return {\"user_id\": user_id, \"email\": email.lower()}",
+        '        raise HTTPException(status_code=422, detail="email is required")\n'
+        '    return {"user_id": user_id, "email": email.lower()}',
     )
     assert healthy_source != broken_source
     app_file = demo_repository / "app.py"
@@ -90,9 +95,7 @@ def test_demo_fixture_can_build_a_recent_regression_diff(tmp_path: Path) -> None
             check=True,
         )
 
-    diff = RepositoryService().git_diff(
-        demo_repository, "HEAD~1", "HEAD"
-    )
+    diff = RepositoryService().git_diff(demo_repository, "HEAD~1", "HEAD")
 
     assert "email.lower()" in diff
     assert "if email is None" in diff
@@ -102,7 +105,7 @@ def test_demo_incident_uses_compact_failure_evidence() -> None:
     output = (
         "captured test logs\n"
         "_________________________ test_profile_requires_email _________________________\n"
-        ">       response = client.get(\"/profile/demo-user\")\n"
+        '>       response = client.get("/profile/demo-user")\n'
         "E       AttributeError: 'NoneType' object has no attribute 'lower'\n"
         "app.py:8: AttributeError: 'NoneType' object has no attribute 'lower'\n"
         "=========================== short test summary info ===========================\n"
@@ -262,6 +265,13 @@ def test_demo_service_runs_the_gated_workflow_and_writes_report(
     assert result.validation_passed is True
     assert result.pr_created is True
     saved = json.loads(report_path.read_text(encoding="utf-8"))
-    assert set(saved) == {"incident", "root_cause", "patch", "tests", "validation", "pr"}
+    assert set(saved) == {
+        "incident",
+        "root_cause",
+        "patch",
+        "tests",
+        "validation",
+        "pr",
+    }
     assert saved["pr"]["url"] == "https://github.com/owner/demo/pull/1"
     assert saved["pr"]["title"] == "Fix missing email"

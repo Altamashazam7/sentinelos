@@ -45,13 +45,15 @@ class RegressionTestGenerator:
                 if isinstance(expected, str) and expected.strip()
                 else "No expected result was returned by the model."
             ),
-            edge_cases=[
-                case.strip()
-                for case in edge_cases
-                if isinstance(case, str) and case.strip()
-            ]
-            if isinstance(edge_cases, list)
-            else [],
+            edge_cases=(
+                [
+                    case.strip()
+                    for case in edge_cases
+                    if isinstance(case, str) and case.strip()
+                ]
+                if isinstance(edge_cases, list)
+                else []
+            ),
         )
 
 
