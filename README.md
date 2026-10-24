@@ -11,32 +11,39 @@ and validation coverage depend on configuration. A successful production
 incident-to-pull-request outcome has not yet been established as a reliability
 guarantee.
 
+## Status and results
+
+- **Tests:** 46 passing, 1 skipped (`cd backend && python -m pytest -q`)
+- **Working:** incident investigation, root-cause analysis, patch target detection, deterministic diff generation with `difflib`, sandboxed validation, replay dashboard, GitHub PR creation behind an approval gate
+- **Demo:** the disposable demo repo (`demo-repo/`) shows a failing test going to a validated patch (see `docs/demo-script.md`)
+- **Not yet done:** large-scale benchmark on real-world bugs, support for hosted model APIs beyond local Ollama models
+
 ## Product and strategy
 
-- [Product positioning](./PRODUCT_POSITIONING.md): category, audience, value,
+- [Product positioning](docs/pitch/PRODUCT_POSITIONING.md): category, audience, value,
   boundaries, and messaging pillars.
-- [Investor pitch](./INVESTOR_PITCH.md): vision, market-entry hypothesis,
+- [Investor pitch](docs/pitch/INVESTOR_PITCH.md): vision, market-entry hypothesis,
   business model, differentiation, and roadmap.
-- [Landing page copy](./LANDING_PAGE_COPY.md): proposed product-facing story.
-- [Competitor analysis](./COMPETITOR_ANALYSIS.md): product-category landscape
+- [Landing page copy](docs/pitch/LANDING_PAGE_COPY.md): proposed product-facing story.
+- [Competitor analysis](docs/pitch/COMPETITOR_ANALYSIS.md): product-category landscape
   and strategic differentiation hypotheses.
-- [One-sentence pitches](./ONE_SENTENCE_PITCH.md): investor, judge, enterprise,
+- [One-sentence pitches](docs/pitch/ONE_SENTENCE_PITCH.md): investor, judge, enterprise,
   and technical versions.
-- [Top presentation moments](./TOP_10_DEMO_MOMENTS.md): a concise, truthful
+- [Top presentation moments](docs/pitch/TOP_10_DEMO_MOMENTS.md): a concise, truthful
   three-minute narrative.
-- [Executive summary](./EXECUTIVE_SUMMARY.md): company thesis and market
+- [Executive summary](docs/pitch/EXECUTIVE_SUMMARY.md): company thesis and market
   opportunity for launch conversations.
-- [Go-to-market strategy](./GO_TO_MARKET.md): target customer, ICP, pilot, and
+- [Go-to-market strategy](docs/pitch/GO_TO_MARKET.md): target customer, ICP, pilot, and
   enterprise rollout hypotheses.
-- [Business model](./BUSINESS_MODEL.md): proposed SaaS, enterprise, and
+- [Business model](docs/pitch/BUSINESS_MODEL.md): proposed SaaS, enterprise, and
   usage-based packaging.
-- [Long-term vision](./SENTINELOS_VISION.md): three-, five-, and ten-year
+- [Long-term vision](docs/pitch/SENTINELOS_VISION.md): three-, five-, and ten-year
   product ambition and the conditions it depends on.
-- [Three-minute launch pitch](./DEMO_WINNING_SCRIPT.md): timed presentation
+- [Three-minute launch pitch](docs/pitch/DEMO_WINNING_SCRIPT.md): timed presentation
   script with truthful demo guardrails.
-- [Investor one-pager](./INVESTOR_ONE_PAGER.md): concise company overview,
+- [Investor one-pager](docs/pitch/INVESTOR_ONE_PAGER.md): concise company overview,
   stage, and proof points.
-- [Startup case and funding verdict](./STARTUP_CASE_AND_VERDICT.md): reasons
+- [Startup case and funding verdict](docs/pitch/STARTUP_CASE_AND_VERDICT.md): reasons
   the company could succeed or fail and a milestone-based funding view.
 
 ## Architecture and workflow
@@ -299,7 +306,7 @@ Operational instructions and presentation material:
 - [RUNBOOK.md](./RUNBOOK.md): local, Docker, Ollama, and presentation-workflow
   startup; tests and troubleshooting.
 - [DEMO_SCRIPT.md](./DEMO_SCRIPT.md): timed three-minute presentation.
-- [JUDGE_PITCH.md](./JUDGE_PITCH.md): problem, architecture, impact, and
+- [JUDGE_PITCH.md](docs/pitch/JUDGE_PITCH.md): problem, architecture, impact, and
   infrastructure rationale.
 
 ## Tests
