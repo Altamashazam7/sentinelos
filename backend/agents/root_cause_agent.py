@@ -1,10 +1,17 @@
 import logging
+import re
 from typing import Any, TypedDict
 
 from models import Incident
 from services.ollama_service import OllamaService
 
 logger = logging.getLogger(__name__)
+_MAX_GIT_DIFF_CHARS = 12_000
+_DIFF_TRUNCATION_MARKER = "\n[git diff truncated]"
+_LOCKFILE_PATH = re.compile(
+    r"/(?:package-lock\.json|yarn\.lock|pnpm-lock\.yaml|poetry\.lock|Pipfile\.lock)"
+    r'(?=$|[\s"])'
+)
 
 
 class RootCauseAgentResult(TypedDict):
@@ -29,7 +36,7 @@ def run(
         "logs": incident.logs or log_result.get("finding"),
         "stack_trace": incident.stack_trace,
         "failed_test": incident.failed_test or test_result.get("finding"),
-        "git_diff": incident.git_diff or git_result.get("diff"),
+        "git_diff": _root_cause_git_diff(incident.git_diff or git_result.get("diff")),
         "git": git_result.get("finding"),
         "commits": git_result.get("commits"),
         "tests": incident.failed_test or test_result.get("finding"),
@@ -37,6 +44,24 @@ def run(
         "prior_resolutions": prior_resolutions or [],
     }
     return analyze_evidence(evidence, ollama)
+
+
+def _root_cause_git_diff(git_diff: str | None) -> str:
+    if not git_diff:
+        return ""
+
+    sections = re.split(r"(?m)(?=^diff --git )", git_diff)
+    relevant_sections = [
+        section
+        for section in sections
+        if section and not _LOCKFILE_PATH.search(section.splitlines()[0])
+    ]
+    filtered_diff = "".join(relevant_sections)
+    if len(filtered_diff) <= _MAX_GIT_DIFF_CHARS:
+        return filtered_diff
+
+    content_limit = _MAX_GIT_DIFF_CHARS - len(_DIFF_TRUNCATION_MARKER)
+    return f"{filtered_diff[:content_limit]}{_DIFF_TRUNCATION_MARKER}"
 
 
 def analyze_evidence(
@@ -53,7 +78,8 @@ def analyze_evidence(
         f"{evidence!r}"
     )
     logger.info(
-        "root cause model response received",
+        "root cause model response received: %s",
+        model_result,
         extra={
             "event": "root_cause_model_response",
             "root_cause_model_result": model_result,
